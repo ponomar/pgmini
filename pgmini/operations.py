@@ -54,7 +54,7 @@ def _check_null_or_bool(left, right) -> bool:
     return False
 
 
-def _compile_operation_elem(elem, params: list) -> str:
+def _build(elem, params: list) -> str:
     from .select import Select
 
     res = elem._build(params)
@@ -99,8 +99,8 @@ class OperationEquality(Operation):
             _wrap_operation_member(self._right),
         )
         res = expr % (
-            _compile_operation_elem(self._left, params),
-            _compile_operation_elem(self._right, params),
+            _build(self._left, params),
+            _build(self._right, params),
         )
         if self._marks:
             res = self._marks.build(res)
@@ -125,8 +125,8 @@ class OperationMath(Operation):
             _wrap_operation_member(self._right),
         )
         res = expr % (
-            _compile_operation_elem(self._left, params),
-            _compile_operation_elem(self._right, params),
+            _build(self._left, params),
+            _build(self._right, params),
         )
         if self._marks:
             res = self._marks.build(res)
@@ -162,7 +162,7 @@ class OperationIn(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationM
             return alias
 
         expr = '%s %s' % (_wrap_operation_member(self._left), self._operator)
-        res = expr % _compile_operation_elem(self._left, params)
+        res = expr % _build(self._left, params)
 
         if isinstance(self._items, tuple):
             res = '%s (%s)' % (res, ', '.join(i._build(params) for i in self._items))
@@ -187,9 +187,9 @@ class OperationBetween(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, Opera
 
         expr = '%s BETWEEN %%s AND %%s' % _wrap_operation_member(self._left)
         res = expr % (
-            _compile_operation_elem(self._left, params),
-            _compile_operation_elem(self._start, params),
-            _compile_operation_elem(self._end, params),
+            _build(self._left, params),
+            _build(self._start, params),
+            _build(self._end, params),
         )
         if self._marks:
             res = self._marks.build(res)
@@ -204,8 +204,8 @@ class OperationAny(Operation):
 
         expr = '%s = ANY(%%s)' % _wrap_operation_member(self._left)
         res = expr % (
-            _compile_operation_elem(self._left, params),
-            _compile_operation_elem(self._right, params),
+            _build(self._left, params),
+            _build(self._right, params),
         )
         if self._marks:
             res = self._marks.build(res)
@@ -222,9 +222,9 @@ class OperationLike(Operation):
 
         expr = '%s %%s %%s' % _wrap_operation_member(self._left)
         res = expr % (
-            _compile_operation_elem(self._left, params),
+            _build(self._left, params),
             self._operator,
-            _compile_operation_elem(self._right, params),
+            _build(self._right, params),
         )
         if self._marks:
             res = self._marks.build(res)
@@ -245,8 +245,8 @@ class OperationCustom(Operation):
 
         expr = '%s %s %%s' % (_wrap_operation_member(self._left), self._operator)
         res = expr % (
-            _compile_operation_elem(self._left, params),
-            _compile_operation_elem(self._right, params),
+            _build(self._left, params),
+            _build(self._right, params),
         )
         if self._marks:
             res = self._marks.build(res)
