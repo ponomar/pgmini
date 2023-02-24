@@ -1,7 +1,7 @@
 import attrs
 
 from .marks import Marks
-from .order_by import compile_order_by
+from .order_by import build_order_by
 from .utils import CTX_ALIAS_ONLY, CompileABC
 
 
@@ -20,4 +20,4 @@ def extract_alias(elem: CompileABC) -> str | None:
         and (marks := getattr(elem, '_marks', None)) is not None
         and (alias := marks.alias) is not None
     ):
-        return compile_order_by(alias, marks=marks)
+        return build_order_by(alias, marks=marks)

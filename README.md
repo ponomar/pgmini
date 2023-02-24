@@ -1,4 +1,4 @@
-## 🇺🇦 What is that? 🇺🇦
+## 🇺🇦 What is PGmini? 🇺🇦
 It is the PostgreSQL query builder with next core principles:
 - simple (predictable, without magic)
 - fast

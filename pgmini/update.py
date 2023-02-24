@@ -9,11 +9,11 @@ from .utils import (
     CTX_CTE,
     CompileABC,
     FromABC,
-    compile_from,
-    compile_returning,
-    compile_set,
-    compile_where,
-    compile_with,
+    build_from,
+    build_returning,
+    build_set,
+    build_where,
+    build_with,
 )
 
 
@@ -73,17 +73,17 @@ class Update(CompileABC):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(compile_with(self._with, params))
+            parts.append(build_with(self._with, params))
 
         parts.extend([
             'UPDATE %s' % self._table._name,
-            compile_set(self._set, params=params),
+            build_set(self._set, params=params),
         ])
         if self._from:
-            parts.append(compile_from(self._from, params))
+            parts.append(build_from(self._from, params))
         if self._where:
-            parts.append(compile_where(self._where, params=params))
+            parts.append(build_where(self._where, params=params))
         if self._returning:
-            parts.append(compile_returning(self._returning, params=params))
+            parts.append(build_returning(self._returning, params=params))
 
         return ' '.join(parts)

@@ -16,9 +16,9 @@ from .utils import (
     RE_NEED_BRACKETS,
     RE_PARENTHESIZED,
     CompileABC,
-    compile_returning,
-    compile_set,
-    compile_with,
+    build_returning,
+    build_set,
+    build_with,
     set_context,
 )
 
@@ -91,7 +91,7 @@ class OnConflict:
         if self.do_update is not None:
             res.append(
                 'DO UPDATE %s'
-                % compile_set(self.do_update, params=params)
+                % build_set(self.do_update, params=params)
             )
 
         if self.do_nothing:
@@ -184,7 +184,7 @@ class Insert(CompileABC):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(compile_with(self._with, params))
+            parts.append(build_with(self._with, params))
 
         with set_context({CTX_DISABLE_TABLE_IN_COLUMN: True}):
             parts.append('INSERT INTO %s (%s)' % (
@@ -206,6 +206,6 @@ class Insert(CompileABC):
         if self._on_conflict is not None:
             parts.append(self._on_conflict.build(params))
         if self._returning:
-            parts.append(compile_returning(self._returning, params=params))
+            parts.append(build_returning(self._returning, params=params))
 
         return ' '.join(parts)

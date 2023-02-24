@@ -5,7 +5,7 @@ from typing import Any, Literal as LiteralT
 
 import attrs
 
-from .cast import compile_cast
+from .cast import build_cast
 from .column import Column, prepare_column
 from .literal import Literal
 from .operators import And
@@ -19,9 +19,9 @@ from .utils import (
     CompileABC,
     FromABC,
     SelectMX,
-    compile_from,
-    compile_where,
-    compile_with,
+    build_from,
+    build_where,
+    build_with,
     set_context,
     wrap_brackets_if_needed,
 )
@@ -226,7 +226,7 @@ class Select(CompileABC, SelectMX):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(compile_with(self._with, params))
+            parts.append(build_with(self._with, params))
 
         ctx = partial(set_context, {CTX_TABLES: self._from + tuple(i.table for i in self._join)})
 
@@ -245,14 +245,14 @@ class Select(CompileABC, SelectMX):
             )))
 
         if self._from:
-            parts.append(compile_from(self._from, params))
+            parts.append(build_from(self._from, params))
 
         if self._join:
             parts.extend(obj._build(params) for obj in self._join)
 
         with ctx():
             if self._where:
-                parts.append(compile_where(self._where, params=params))
+                parts.append(build_where(self._where, params=params))
 
             with set_context({CTX_ALIAS_ONLY: True}):
                 if self._group_by:
@@ -286,7 +286,7 @@ class Select(CompileABC, SelectMX):
         res = ' '.join(parts)
 
         if self._cast is not None:
-            res = compile_cast(res, cast=self._cast)
+            res = build_cast(res, cast=self._cast)
 
         if self._alias is not None:
             res = '(%s) AS %s' % (res, self._alias)

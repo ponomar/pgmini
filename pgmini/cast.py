@@ -20,7 +20,7 @@ class CastMX:
         return attrs.evolve(self, x_marks=marks)
 
 
-def compile_cast(value: str, cast: str) -> str:
+def build_cast(value: str, cast: str) -> str:
     if (
         RE_NEED_BRACKETS.search(value)
         and not RE_PARENTHESIZED.fullmatch(value)

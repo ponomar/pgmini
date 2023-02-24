@@ -3,7 +3,7 @@ import attrs
 from .column import prepare_column
 from .subquery import Subquery
 from .table import Table
-from .utils import CTX_CTE, CompileABC, compile_returning, compile_where, compile_with
+from .utils import CTX_CTE, CompileABC, build_returning, build_where, build_with
 
 
 def _convert_returning(value):
@@ -33,12 +33,12 @@ class Delete(CompileABC):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(compile_with(self._with, params))
+            parts.append(build_with(self._with, params))
 
         parts.append('DELETE FROM %s' % self._table._name)
         if self._where:
-            parts.append(compile_where(self._where, params=params))
+            parts.append(build_where(self._where, params=params))
         if self._returning:
-            parts.append(compile_returning(self._returning, params=params))
+            parts.append(build_returning(self._returning, params=params))
 
         return ' '.join(parts)

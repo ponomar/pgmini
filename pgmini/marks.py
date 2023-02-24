@@ -32,16 +32,16 @@ class Marks:
         )
 
     def build(self, value: str) -> str:
-        from .cast import compile_cast
-        from .order_by import compile_order_by
+        from .cast import build_cast
+        from .order_by import build_order_by
 
         if self.cast:
-            value = compile_cast(value, cast=self.cast)
+            value = build_cast(value, cast=self.cast)
         if self.alias:
             value = '%s AS %s' % (value, self.alias)
         if self.distinct:
             value = 'DISTINCT %s' % value
-        return compile_order_by(value, marks=self)
+        return build_order_by(value, marks=self)
 
     def __repr__(self):
         items = []

@@ -49,7 +49,7 @@ def set_context(items: dict[ContextVar, Any]):
         ctx.reset(token)
 
 
-def compile_where(statements, params: list) -> str:
+def build_where(statements, params: list) -> str:
     from .operators import And
 
     if len(statements) > 1:
@@ -66,22 +66,22 @@ def wrap_brackets_if_needed(item: str, obj) -> str:
     return item
 
 
-def compile_with(statements, params: list) -> str:
+def build_with(statements, params: list) -> str:
     return 'WITH %s' % ', '.join(i._get_with_statement(params) for i in statements)
 
 
-def compile_from(statements, params: list) -> str:
+def build_from(statements, params: list) -> str:
     return 'FROM %s' % ', '.join(
         i._alias if i in CTX_CTE.get() else i._get_from_statement(params)
         for i in statements
     )
 
 
-def compile_returning(columns, params: list) -> str:
+def build_returning(columns, params: list) -> str:
     return 'RETURNING %s' % ', '.join(i._build(params) for i in columns)
 
 
-def compile_set(items: dict, params: list) -> str:
+def build_set(items: dict, params: list) -> str:
     parts = []
     for k, v in items.items():
         if isinstance(k, CompileABC):

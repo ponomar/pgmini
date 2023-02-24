@@ -36,7 +36,7 @@ class OrderByMX:
         return attrs.evolve(self, x_marks=marks)
 
 
-def compile_order_by(value: str, marks: Marks) -> str:
+def build_order_by(value: str, marks: Marks) -> str:
     if marks.order_by:
         value = '%s %s' % (value, marks.order_by)
     if marks.order_by_nulls:

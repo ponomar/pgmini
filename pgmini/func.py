@@ -17,7 +17,7 @@ from .utils import (
     CompileABC,
     FromABC,
     SelectMX,
-    compile_where,
+    build_where,
     set_context,
     wrap_brackets_if_needed,
 )
@@ -111,7 +111,7 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
             parts.append(self._over.build(params))
 
         if self._where:
-            parts.append('FILTER (%s)' % compile_where(self._where, params=params))
+            parts.append('FILTER (%s)' % build_where(self._where, params=params))
 
         res = ' '.join(parts)
         if self._marks:
