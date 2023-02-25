@@ -25,7 +25,13 @@ include_trailing_comma = true
 combine_as_imports = true
 
 [tool.ruff]
-select = ["E", "F", "B"]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
 line-length = 100
 target-version = "py310"
 
