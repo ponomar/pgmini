@@ -1,15 +1,10 @@
 ## 🇺🇦 What is PGmini? 🇺🇦
 
-***
-<center>
 [![Test & Lint](https://github.com/ponomar/pgmini/actions/workflows/main.yml/badge.svg)](https://github.com/ponomar/pgmini/actions/workflows/main.yml)
-</center>
 
 It is the PostgreSQL query builder with next core principles:
 - simple (predictable, without magic)
 - fast
-
-***
 
 All object are immutable (thanks to [attrs](https://www.attrs.org) lib).
 Python code as close to SQL structure as possible.
