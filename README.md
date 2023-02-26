@@ -10,10 +10,10 @@ All object are immutable (thanks to [attrs](https://www.attrs.org) lib).
 Python code as close to SQL structure as possible.
 Library doesn't try to be everything.
 It doesn't manage connections to postgres, doesn't escape params.
-All this can and should be done with other tools: (asyncpg, psycopg2, ...).
+All this can and should be done with other tools: (asyncpg, psycopg2, postgresql itself etc.).
 
 I've decided to use `PascalCase` methods naming to avoid collisions with python reserved words: 
-`From`, `And`, `Or`, `Else`, `With`, `As`, etc.
+`From`, `And`, `Or`, `Else`, `With`, `As` etc.
 
 ## Examples
 ```python
@@ -41,11 +41,11 @@ class RoleSchema(Table):
     def status_active(self):  # can also be decorated with functools.cache
         return self.status == Literal('active')
     
-    def name_like(self, value: str):
-        return self.name.Like(f'%{value}%')
+    def name_startswith(self, value: str):
+        return self.name.Like(f'{value}%')
 
 Role = RoleSchema('role')
-q = Select(Role.id).From(Role).Where(Role.status_active, Role.name_like('adm'))
+q = Select(Role.id).From(Role).Where(Role.status_active, Role.name_startswith('admin'))
 
 RoleAlias = Role.As('role2')  # all columns/methods are visible for IDE live inspection as well
 q = (

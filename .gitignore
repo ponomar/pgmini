@@ -2,6 +2,6 @@
 .ruff_cache/
 __pycache__/
 _local_
+dist/
 .idea/
 .DS_Store
-poetry.lock
