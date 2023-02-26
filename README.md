@@ -74,7 +74,7 @@ It also pushes many people to write bad (not optimized) code.
 ### Why not pypika?
 While it is much simpler then sqlalchemy, it also requires you to learn their own syntax 
 and not always obvious how to write code without looking into the docs.
-Its objects are also mutable which requires extra attention while writing code and leads to errors.
+And by default it uses parameters as literals, so it can lead to sql injections.
 
 
 ***
