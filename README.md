@@ -1,6 +1,6 @@
 [![Test & Lint](https://github.com/ponomar/pgmini/actions/workflows/main.yml/badge.svg)](https://github.com/ponomar/pgmini/actions/workflows/main.yml)
 
-## 🇺🇦 What is PGmini? 🇺🇦
+## 🇺🇦 What is pgmini? 🇺🇦
 
 It is the PostgreSQL query builder with next core principles:
 - simple (predictable, without magic)
@@ -68,12 +68,10 @@ q = (
 It is good for simple projects with simple sql queries. 
 But when your project grows up, your team grows up, sqlalchemy always leads to errors,
 unnecessary complexity, extra time your team need to spend to learn it, find not obvious bugs etc.  
-It also pushes many people to write bad (not optimized) code.
 
 
 ### Why not pypika?
-While it is much simpler then sqlalchemy, it also requires you to learn their own syntax 
-and not always obvious how to write code without looking into the docs.
+While it is much simpler then sqlalchemy, it also requires you to learn their own "sql syntax" which is not always obvious.
 And by default it uses parameters as literals, so it can lead to sql injections.
 
 
