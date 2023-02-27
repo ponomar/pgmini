@@ -73,10 +73,26 @@ q = (
 q2 = q.Where(t.id != 14)
 ```
 
+#### JOIN
+```python
+t, t2 = Table('tbl'), Table('tbl2')
+
+sq = Select(t2.name).From(t2).Where(t2.id == t.id).Subquery('sq')
+q = (
+    Select(t.id).From(t)
+    .Join(t2, t2.id == t.id)
+    .LeftJoin(t2, And(t2.id == t.id, t2.status == 'active'))
+    .JoinLateral(sq, True)
+    .LeftJoinLateral(sq, sq.name != 'test')
+)
+```
+
 #### PARAMETERS / LITERALS
 By default, all values are considered as parameters. 
 If you need to cast value or add alias use Param wrapper.
-If you need to literally insert value into sql use special Literal wrapper, but be very careful - it won't be escaped and can lead to SQL injections. Use Literal only to data you can 100% trust.
+If you need to literally insert value into sql use special Literal wrapper, 
+but be very careful - it won't be escaped and can lead to SQL injections. 
+Use Literal only with data you can 100% trust.
 ```python
 t = Table('tbl')
 q = (
