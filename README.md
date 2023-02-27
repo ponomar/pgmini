@@ -132,6 +132,8 @@ q3 = Select(f.STAR).From(f)
 # SELECT * FROM UNNEST(ARRAY[1, 2, 3]) AS idx
 
 q4 = Select(Case((t.id == 1, 'first'), (t.id == 2, 'second'), Else='third').As('val')).From(t)
+
+q5 = Select(Array([t.id, 5, 7])).From(t)
 ```
 
 #### ORDER BY / GROUP BY / HAVING / DISTINCT / DISTINCT ON
