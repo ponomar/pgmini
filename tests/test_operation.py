@@ -117,6 +117,10 @@ def test_multiple():
         t.col.Op('#>', P(['l1', 'l2'])).Cast('int').As('sq'),
         '(t.col #> $1)::int AS sq', [['l1', 'l2']], id='custom param',
     ),
+    pytest.param(
+        t.col.Op('#>', ['l1', 'l2']),
+        't.col #> $1', [['l1', 'l2']], id='custom raw param',
+    ),
     pytest.param(t.col.Between(L(1), L(2)), 't.col BETWEEN 1 AND 2', [], id='between'),
     pytest.param(
         t.col.Between(P(1).Cast('int'), 25), 't.col BETWEEN $1::int AND $2', [1, 25],
