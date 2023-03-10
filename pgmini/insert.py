@@ -3,8 +3,6 @@ from typing import Any
 import attrs
 
 from .column import Column, prepare_column
-from .literal import Literal
-from .param import Param
 from .select import Select
 from .subquery import Subquery
 from .table import Table
@@ -147,7 +145,7 @@ class Insert(CompileABC):
             for row in self._values:
                 if len(row) != len(self._columns):
                     raise ValueError((len(row), len(self._columns)))
-                if bad := [i for i in row if not isinstance(i, (Literal, Param))]:
+                elif bad := [i for i in row if not isinstance(i, CompileABC)]:
                     raise TypeError(bad)
 
     def Values(self, *rows: tuple):

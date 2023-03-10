@@ -54,6 +54,11 @@ def test_values_full():
     assert build(q) == ('INSERT INTO t (c1, c2) VALUES ($1, $2) RETURNING t.id', [1, 2])
 
 
+def test_func_as_value():
+    q = Ins(t, columns=('c1', 'c2')).Values((1, F.now())).Returning(t.id)
+    assert build(q) == ('INSERT INTO t (c1, c2) VALUES ($1, NOW()) RETURNING t.id', [1])
+
+
 def test_select():
     q = Ins(t2, columns=('id', 'dt')).Select(
         S(t.id, t.dt)

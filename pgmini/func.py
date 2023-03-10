@@ -23,6 +23,9 @@ from .utils import (
 )
 
 
+__all__ = ['F', 'Func']
+
+
 def _convert_partition_by(value):
     if value is not None:
         if not isinstance(value, ITERABLES):
@@ -58,7 +61,6 @@ class Over:
 
 
 STAR: Final[Literal] = Literal(STAR_SIGN)
-NULL: Final[Literal] = Literal(None)
 
 
 def _converter_params(value):
