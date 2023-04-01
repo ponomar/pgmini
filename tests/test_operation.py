@@ -101,9 +101,12 @@ def test_multiple():
         id='NOT IN query',
     ),
     pytest.param(
-        t.col2.Any([22, 23, 24, 25]).Distinct().Cast('float').As('cba'),
-        'DISTINCT (t.col2 = ANY($1))::float AS cba', [[22, 23, 24, 25]], id='ANY raw',
+        t.col2.Any(obj1 := [22, 23, 24, 25]).Distinct().Cast('float').As('cba'),
+        'DISTINCT (t.col2 = ANY($1))::float AS cba', [obj1], id='ANY raw',
     ),
+    pytest.param(t.col.Any(obj2 := (22, 23, 24)), 't.col = ANY($1)', [obj2], id='ANY as tuple'),
+    pytest.param(t.col.Any(obj3 := {1, 3, 5}), 't.col = ANY($1)', [obj3], id='ANY as set'),
+    pytest.param(t.col.Any(obj4 := {1: 'a', 33: 'b'}), 't.col = ANY($1)', [obj4], id='ANY as dict'),
     pytest.param(
         t.col2.Any(P([1, 2]).Cast('int[]')), 't.col2 = ANY($1::int[])',
         [[1, 2]], id='ANY param',

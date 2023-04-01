@@ -6,17 +6,20 @@ from pgmini import Array as A, Literal as L, Param as P, Table as T, build
 t, t2 = T('t'), T('t2')
 
 
-@pytest.mark.parametrize('value', [
-    pytest.param([], id='list'),
-    pytest.param((), id='tuple'),
-    pytest.param(set(), id='set'),
+@pytest.mark.parametrize('value,sql,param', [
+    pytest.param([], 'ARRAY[]', [], id='empty list'),
+    pytest.param([1, 2, 3], 'ARRAY[$1, $2, $3]', [1, 2, 3], id='list'),
+    pytest.param((), 'ARRAY[]', [], id='empty tuple'),
+    pytest.param((1, 44), 'ARRAY[$1, $2]', [1, 44], id='tuple'),
+    pytest.param(set(), 'ARRAY[]', [], id='empty set'),
+    pytest.param({1, 55, 588, 44}, 'ARRAY[$1, $2, $3, $4]', list({1, 55, 588, 44}), id='set'),
+    pytest.param({}, 'ARRAY[]', [], id='empty dict'),
+    pytest.param({1: 'a', 56: 'b', 33: 'c'}, 'ARRAY[$1, $2, $3]', [1, 56, 33], id='dict'),
+    pytest.param(iter([]), 'ARRAY[]', [], id='empty generator'),
+    pytest.param(iter([1, 6, 3, -1]), 'ARRAY[$1, $2, $3, $4]', [1, 6, 3, -1], id='generator'),
 ])
-def test_empty(value):
-    assert build(A(value)) == ('ARRAY[]', [])
-
-
-def test():
-    assert build(A([1, 2, 3])) == ('ARRAY[$1, $2, $3]', [1, 2, 3])
+def test(value, sql: str, param: list):
+    assert build(A(value)) == (sql, param)
 
 
 def test_literal():

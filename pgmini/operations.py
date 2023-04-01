@@ -1,5 +1,3 @@
-from datetime import date, datetime
-from decimal import Decimal
 from typing import Any, Final
 
 import attrs
@@ -17,17 +15,11 @@ from .param import Param
 from .utils import ITERABLES, RE_PARENTHESIZED, CompileABC, SelectMX
 
 
-_RAW_ALLOWED: Final[tuple] = (str, int, float, list, tuple, bool, Decimal, dict, type(None), bool,
-                              date, datetime)
 _NOT_SET = object()
 
 
 def _convert_right(value):
-    from .select import Select
-
-    if not isinstance(value, (OperationMX, Select)):
-        if not isinstance(value, _RAW_ALLOWED):
-            raise TypeError(value)
+    if not isinstance(value, CompileABC):
         value = Param(value)
 
     return value
