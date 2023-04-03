@@ -203,8 +203,8 @@ build(q)
 # From select
 q = (
     Insert(t, columns=(t.name, t.status))
-    .From(
-        Select(Func.concat(t.name, Func.random().Cast('text'), t.status))
+    .Select(
+        Select(F.concat(t.name, F.random().Cast('text'), t.status))
         .From(t)
         .Where(t.id < 100)
         .Limit(10)
