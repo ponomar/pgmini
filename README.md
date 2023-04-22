@@ -204,7 +204,7 @@ build(q)
 q = (
     Insert(t, columns=(t.name, t.status))
     .Select(
-        Select(F.concat(t.name, F.random().Cast('text'), t.status))
+        Select(F.concat(t.name, F.random().Cast('text')), t.status)
         .From(t)
         .Where(t.id < 100)
         .Limit(10)
