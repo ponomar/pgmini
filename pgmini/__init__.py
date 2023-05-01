@@ -1,4 +1,5 @@
 from contextvars import copy_context
+from typing import Literal as TypeLiteral
 
 import attrs
 
@@ -25,7 +26,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __all__ = (
     'And',
     'Array',
@@ -76,13 +77,22 @@ class With:
         return Delete(table, x_with=self._subqueries)
 
 
-def build(item: CompileABC) -> tuple[str | None, list]:
+def build(
+    item: CompileABC,
+    driver: TypeLiteral['asyncpg', 'psycopg'] = 'asyncpg',
+) -> tuple[str | None, list | dict]:
     def run():
         CTX_FORCE_CAST_BRACKETS.set(False)
         CTX_CTE.set(())
         CTX_TABLES.set(())
         CTX_ALIAS_ONLY.set(False)
         CTX_DISABLE_TABLE_IN_COLUMN.set(False)
-        return item._build(params := []), params
+
+        if driver == 'asyncpg':
+            params = []
+        else:
+            params = {}
+
+        return item._build(params), params
 
     return copy_context().run(run)

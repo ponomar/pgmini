@@ -44,7 +44,7 @@ class Literal(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, S
             elif bad := [i for i in value if type(i) not in _TYPES]:
                 raise TypeError(bad)
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

@@ -17,13 +17,18 @@ class Param(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Sel
     _value: Any = attrs.field(alias='value', converter=deepcopy)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
         index = len(params) + 1
-        params.append(self._value)
-        res = '$%d' % index
+        if isinstance(params, list):
+            params.append(self._value)
+            res = '$%d' % index
+        else:
+            params[f'p{index}'] = self._value
+            res = f'%(p{index})s'
+
         if self._marks:
             res = self._marks.build(res)
         return res

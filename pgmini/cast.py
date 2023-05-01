@@ -7,6 +7,7 @@ from .utils import (
     RE_FUNC_PARENTHESIZED,
     RE_NEED_BRACKETS,
     RE_PARENTHESIZED,
+    RE_PSYCOPG_PARAM,
     RE_SINGLE_QUOTED,
 )
 
@@ -27,6 +28,7 @@ def build_cast(value: str, cast: str) -> str:
         and not RE_FUNC_PARENTHESIZED.fullmatch(value)
         and not RE_SINGLE_QUOTED.fullmatch(value)
         and not RE_ARRAY.fullmatch(value)
+        and not RE_PSYCOPG_PARAM.fullmatch(value)
     ):
         value = '(%s)' % value
     value = '%s::%s' % (value, cast)

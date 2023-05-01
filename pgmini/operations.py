@@ -31,7 +31,7 @@ class Operation(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX,
     _right: Any = attrs.field(alias='right', converter=_convert_right)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         raise NotImplementedError
 
 
@@ -46,7 +46,7 @@ def _check_null_or_bool(left, right) -> bool:
     return False
 
 
-def _build(elem, params: list) -> str:
+def _build(elem, params: list | dict) -> str:
     from .select import Select
 
     res = elem._build(params)
@@ -76,7 +76,7 @@ class OperationEquality(Operation):
         elif self._operator_is is _NOT_SET:
             raise ValueError
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -107,7 +107,7 @@ class OperationMath(Operation):
         if self._operator is _NOT_SET:
             raise ValueError
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -149,7 +149,7 @@ class OperationIn(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationM
     _marks: MARKS_TYPE = MARKS_FIELD
     _operator: str = attrs.field(alias='operator', default='IN')
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -173,7 +173,7 @@ class OperationBetween(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, Opera
     _end: CompileABC = attrs.field(alias='end', converter=prepare_column)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -190,7 +190,7 @@ class OperationBetween(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, Opera
 
 @attrs.frozen(eq=False)
 class OperationAny(Operation):
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -208,7 +208,7 @@ class OperationAny(Operation):
 class OperationLike(Operation):
     _operator: str = attrs.field(alias='operator', default='LIKE')
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
@@ -231,7 +231,7 @@ class OperationCustom(Operation):
         if self._operator is _NOT_SET:
             raise ValueError
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

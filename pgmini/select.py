@@ -40,7 +40,7 @@ class _Join:
     on_statement: Any = attrs.field(converter=_convert_on_statement)
     lateral: bool = attrs.field(validator=attrs.validators.in_({True, False}), default=False)
 
-    def _build(self, params: list):
+    def _build(self, params: list | dict):
         if self.type == 'right':
             sql = 'JOIN'
         else:
@@ -66,7 +66,7 @@ class _Union:
     )
     select: Select
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         expr = 'UNION'
         if self.type == 'all':
             expr = '%s ALL' % expr
@@ -219,7 +219,7 @@ class Select(CompileABC, SelectMX):
     def Subquery(self, alias: str, materialized: bool = False):
         return Subquery(self, alias=alias, materialized=materialized)
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         parts = []
 
         if self._with:

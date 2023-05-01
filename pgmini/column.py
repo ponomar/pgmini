@@ -24,7 +24,7 @@ class Column(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Se
     _table: FromABC | None = attrs.field(alias='table', default=None)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

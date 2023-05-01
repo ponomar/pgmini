@@ -52,5 +52,5 @@ class Subquery(FromABC):
             res = '%s MATERIALIZED' % res
         return '%s (%s)' % (res, self._statement._build(params))
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         return self._get_from_statement(params)

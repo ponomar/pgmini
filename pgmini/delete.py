@@ -27,7 +27,7 @@ class Delete(CompileABC):
     def Subquery(self, alias: str, materialized: bool = False) -> Subquery:
         return Subquery(self, alias=alias, materialized=materialized)
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         parts = []
         if self._with:
             if CTX_CTE.get():

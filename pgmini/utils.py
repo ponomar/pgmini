@@ -11,7 +11,7 @@ class SelectMX:
 
 class CompileABC(ABC):
     @abstractmethod
-    def _build(self, params: list) -> str | None:
+    def _build(self, params: list | dict) -> str | None:
         raise NotImplementedError
 
 
@@ -30,6 +30,7 @@ RE_PARENTHESIZED: Final[Pattern] = re.compile(r'\(.*\)')
 RE_FUNC_PARENTHESIZED: Final[Pattern] = re.compile(r'[a-z0-9_.]+\([^()]*\)', flags=re.IGNORECASE)
 RE_SINGLE_QUOTED: Final[Pattern] = re.compile("'[^']*'")
 RE_ARRAY: Final[Pattern] = re.compile(r'ARRAY\[.*\]')
+RE_PSYCOPG_PARAM: Final[Pattern] = re.compile(r'%\(p[0-9]+\)s')
 ITERABLES: Final[tuple] = (list, tuple, set, frozenset)
 STAR_SIGN: Final[str] = '*'
 CTX_FORCE_CAST_BRACKETS: Final[ContextVar[bool]] = ContextVar('force_cast_brackets')

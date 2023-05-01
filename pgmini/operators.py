@@ -24,7 +24,7 @@ class And(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Selec
         kwargs.setdefault('statements', statements)
         self.__attrs_init__(**kwargs)
 
-    def _build(self, params: list) -> str | None:
+    def _build(self, params: list | dict) -> str | None:
         if not self._statements:
             return
         elif alias := extract_alias(self):
@@ -59,7 +59,7 @@ class Not(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Selec
     _statement: CompileABC = attrs.field(alias='statement')
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         from .operations import Operation
 
         if alias := extract_alias(self):
@@ -83,7 +83,7 @@ class Not(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Selec
 
 @attrs.frozen(eq=False, repr=False)
 class Exists(Not):
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

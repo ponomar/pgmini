@@ -88,7 +88,7 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
     def OrderBy(self, *statements):
         return do_order_by(self, statements)
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

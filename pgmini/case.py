@@ -42,7 +42,7 @@ class Case(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Sele
         kwargs.setdefault('x_else', Else)
         self.__attrs_init__(**kwargs)
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 

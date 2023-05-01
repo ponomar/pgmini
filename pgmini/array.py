@@ -17,7 +17,7 @@ class Array(CompileABC, CastMX, AliasMX, OperationMX, SelectMX):
     _items: tuple[CompileABC, ...] = attrs.field(alias='items', converter=_convert_items)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def _build(self, params: list) -> str:
+    def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
