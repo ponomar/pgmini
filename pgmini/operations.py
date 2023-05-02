@@ -125,6 +125,48 @@ class OperationMath(Operation):
         return res
 
 
+@attrs.frozen(eq=False)
+class OperationSlice(Operation):
+    _right: Any = attrs.field(alias='right', default=_NOT_SET)
+
+    def _build(self, params: list | dict) -> str:
+        if alias := extract_alias(self):
+            return alias
+
+        expr = '%s[%s]' % (
+            _wrap_operation_member(self._left),
+            _wrap_operation_member(self._right),
+        )
+        part1 = _build(self._left, params)
+        if (
+            self._left._marks is not None
+            and self._left._marks.cast is not None
+            and not RE_PARENTHESIZED.fullmatch(part1)
+        ):
+            part1 = '(%s)' % part1
+
+        if isinstance(self._right, slice):
+            part2 = '%s:%s' % (
+                (
+                    ''
+                    if self._right.start is None
+                    else _build(_convert_right(self._right.start), params)
+                ),
+                (
+                    ''
+                    if self._right.stop is None
+                    else _build(_convert_right(self._right.stop), params)
+                ),
+            )
+        else:
+            part2 = _build(_convert_right(self._right), params)
+
+        res = expr % (part1, part2)
+        if self._marks:
+            res = self._marks.build(res)
+        return res
+
+
 def _convert_items(value):
     from .select import Select
 

@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from pgmini import Literal as L, Param as P, Select as S, Table, build
+from pgmini import F, Literal as L, Param as P, Select as S, Table, build
 
 
 t, t2 = Table('t'), Table('t2')
@@ -163,6 +163,36 @@ def test_multiple():
         t.col.Op('at time zone', 'UTC').Op('at time zone', 'Europe/Kyiv').Cast('int').As('az'),
         "((t.col at time zone $1) at time zone $2)::int AS az", ['UTC', 'Europe/Kyiv'],
         id='at time zone twice',
+    ),
+    pytest.param(
+        t.col[2].Cast('text').As('xx'),
+        "(t.col[$1])::text AS xx", [2],
+        id='slice by index',
+    ),
+    pytest.param(
+        t.col1[t.col2],
+        "t.col1[t.col2]", [],
+        id='slice by dynamic index',
+    ),
+    pytest.param(
+        t.col[3:F.array_length(t.col, 1)],
+        "t.col[$1:ARRAY_LENGTH(t.col, $2)]", [3, 1],
+        id='slice by range',
+    ),
+    pytest.param(
+        t.col[:5],
+        "t.col[:$1]", [5],
+        id='slice till index',
+    ),
+    pytest.param(
+        t.col[4:],
+        "t.col[$1:]", [4],
+        id='slice from index',
+    ),
+    pytest.param(
+        t.col.Cast('int[]')[1],
+        "(t.col::int[])[$1]", [1],
+        id='slice with brackets',
     ),
 ])
 def test_other(operation, res: str, updated: list):

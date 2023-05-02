@@ -39,6 +39,16 @@ class OperationMX:
         from .operations import OperationMath
         return OperationMath(self, right=other, operator='/')
 
+    def __getitem__(self, item: int | slice):
+        from .operations import OperationSlice
+        return OperationSlice(self, right=item)
+
+    def __setitem__(self, item):
+        raise RuntimeError
+
+    def __delitem__(self, key):
+        raise RuntimeError
+
     def Is(self, other):
         from .operations import OperationMath
         return OperationMath(self, right=other, operator='IS')
