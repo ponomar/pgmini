@@ -548,3 +548,15 @@ def test_nested_select_upd_in_with_stmt():
         == 'WITH sq AS (UPDATE t SET id = t.id2 RETURNING t.id) SELECT (SELECT id FROM sq) AS res'
     )
     assert args == []
+
+
+def test_cte_with_select_from_function():
+    fn = F.unnest(P([5, 6])).As('x(name)')
+    sq = S(fn.name).From(fn).Subquery('sq')
+
+    res, args = build(W(sq).Select(t.id).From(t).Join(sq, sq.name == t.name2))
+    assert res == (
+        'WITH sq AS (SELECT name FROM UNNEST($1) AS x(name)) '
+        'SELECT t.id FROM t JOIN sq ON sq.name = t.name2'
+    )
+    assert args == [[5, 6]]

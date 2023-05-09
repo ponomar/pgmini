@@ -73,7 +73,7 @@ def build_with(statements, params: list) -> str:
 
 def build_from(statements, params: list) -> str:
     return 'FROM %s' % ', '.join(
-        i._alias if i in CTX_CTE.get() else i._get_from_statement(params)
+        i._alias if any(i is t for t in CTX_CTE.get()) else i._get_from_statement(params)
         for i in statements
     )
 
