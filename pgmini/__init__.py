@@ -3,7 +3,7 @@ from typing import Literal as TypeLiteral
 
 import attrs
 
-from .array import Array
+from .array import Array, Tuple
 from .case import Case
 from .column import Excluded
 from .delete import Delete
@@ -26,7 +26,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 __all__ = (
     'And',
     'Array',
@@ -44,6 +44,7 @@ __all__ = (
     'Or',
     'Select',
     'Table',
+    'Tuple',
     'Update',
     'With',
     'build',
