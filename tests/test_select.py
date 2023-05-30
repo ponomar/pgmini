@@ -5,6 +5,7 @@ from pgmini import (
     Func as F,
     Literal as L,
     Param as P,
+    Raw,
     Select as S,
     Table as T,
     Update as U,
@@ -173,6 +174,13 @@ def test_group_by_not_chainable():
         q.GroupBy(t.name)
 
 
+def test_group_by_alias():
+    assert build(S(t.id.As('xyz')).From(t).GroupBy(Raw('xyz'))) == (
+        'SELECT id AS xyz FROM t GROUP BY xyz',
+        [],
+    )
+
+
 def test_having():
     assert build(S(t.id).From(t).Having(t.name == 'x')) == (
         'SELECT id FROM t HAVING name = $1',
@@ -277,6 +285,13 @@ def test_order_by_nulls_rewrite():
     assert (
         build(S(L(1)).From(t).OrderBy(t.id.NullsFirst().NullsLast()))[0]
         == 'SELECT 1 FROM t ORDER BY id NULLS LAST'
+    )
+
+
+def test_order_by_alias():
+    assert (
+        build(S(t.id.As('abc')).From(t).OrderBy(Raw('abc').Desc().NullsLast()))
+        == ('SELECT id AS abc FROM t ORDER BY abc DESC NULLS LAST', [])
     )
 
 

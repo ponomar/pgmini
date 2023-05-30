@@ -12,6 +12,7 @@ from .insert import Insert
 from .literal import NULL, Literal
 from .operators import And, Exists, Not, Or
 from .param import Param
+from .raw import Raw
 from .select import Select
 from .subquery import Subquery
 from .table import Table
@@ -26,7 +27,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 __all__ = (
     'And',
     'Array',
@@ -40,8 +41,9 @@ __all__ = (
     'Literal',
     'Not',
     'NULL',
-    'Param',
     'Or',
+    'Param',
+    'Raw',
     'Select',
     'Table',
     'Tuple',
