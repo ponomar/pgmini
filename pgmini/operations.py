@@ -12,7 +12,7 @@ from .operation import OperationMX
 from .operators import And, Or
 from .order_by import OrderByMX
 from .param import Param
-from .utils import ITERABLES, RE_PARENTHESIZED, CompileABC, SelectMX
+from .utils import ITERABLES, RE_NEED_BRACKETS, RE_PARENTHESIZED, CompileABC, SelectMX
 
 
 _NOT_SET = object()
@@ -133,16 +133,12 @@ class OperationSlice(Operation):
         if alias := extract_alias(self):
             return alias
 
-        expr = '%s[%s]' % (
-            _wrap_operation_member(self._left),
-            _wrap_operation_member(self._right),
-        )
         part1 = _build(self._left, params)
         if (
             self._left._marks is not None
             and self._left._marks.cast is not None
             and not RE_PARENTHESIZED.fullmatch(part1)
-        ):
+        ) or RE_NEED_BRACKETS.search(part1):
             part1 = '(%s)' % part1
 
         if isinstance(self._right, slice):
@@ -161,7 +157,7 @@ class OperationSlice(Operation):
         else:
             part2 = _build(_convert_right(self._right), params)
 
-        res = expr % (part1, part2)
+        res = '%s[%s]' % (part1, part2)
         if self._marks:
             res = self._marks.build(res)
         return res

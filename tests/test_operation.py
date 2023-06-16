@@ -194,6 +194,11 @@ def test_multiple():
         "(t.col::int[])[$1]", [1],
         id='slice with brackets',
     ),
+    pytest.param(
+        F.array_agg(t.col)[1],
+        '(ARRAY_AGG(t.col))[$1]', [1],
+        id='slice of function',
+    ),
 ])
 def test_other(operation, res: str, updated: list):
     assert build(operation) == (res, updated)
