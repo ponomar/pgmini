@@ -17,8 +17,8 @@ def test_index():
     assert build(Param('c')) == ('$1', ['c'])
 
 
-def test_value_copied():
+def test_value_not_copied():
     raw = [1, 2, 3]
     obj = Param(raw)
-    raw.append(4)  # test deepcopy for raw value
-    assert build(obj)[1] == [[1, 2, 3]]
+    raw.append(4)
+    assert build(obj)[1] == [[1, 2, 3, 4]]

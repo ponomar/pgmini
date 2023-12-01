@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable
 
 import attrs
 
@@ -112,7 +112,7 @@ def _convert_values(value):
 @attrs.frozen
 class Insert(CompileABC):
     _table: Table = attrs.field(alias='table')
-    _columns: tuple[str | Column, ...] = attrs.field(alias='columns')
+    _columns: Iterable[str | Column] = attrs.field(alias='columns')
     _with: tuple[Subquery, ...] = attrs.field(alias='x_with', factory=tuple)
     _values: tuple[tuple, ...] = attrs.field(
         alias='x_values',
@@ -148,7 +148,7 @@ class Insert(CompileABC):
                 elif bad := [i for i in row if not isinstance(i, CompileABC)]:
                     raise TypeError(bad)
 
-    def Values(self, *rows: tuple):
+    def Values(self, *rows):
         return attrs.evolve(self, x_values=rows)
 
     def Select(self, select: Select):

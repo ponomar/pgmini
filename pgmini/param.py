@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Any
 
 import attrs
@@ -14,7 +13,7 @@ from .utils import CompileABC, SelectMX
 
 @attrs.frozen(repr=False, eq=False)
 class Param(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, SelectMX):
-    _value: Any = attrs.field(alias='value', converter=deepcopy)
+    _value: Any = attrs.field(alias='value')
     _marks: MARKS_TYPE = MARKS_FIELD
 
     def _build(self, params: list | dict) -> str:

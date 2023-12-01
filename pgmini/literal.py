@@ -1,4 +1,3 @@
-from copy import deepcopy
 from datetime import date, datetime
 from types import MappingProxyType
 from typing import Any, Final
@@ -28,7 +27,7 @@ _TYPES: Final[MappingProxyType] = MappingProxyType({
 def _convert_value(value):
     if isinstance(value, (set, frozenset, list)):
         value = tuple(value)
-    return deepcopy(value)
+    return value
 
 
 @attrs.frozen(repr=False, eq=False)

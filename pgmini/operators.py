@@ -20,7 +20,7 @@ class And(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Selec
         if not all(i is not None for i in value):
             raise ValueError(value)
 
-    def __init__(self, *statements: CompileABC, **kwargs):
+    def __init__(self, *statements, **kwargs):
         kwargs.setdefault('statements', statements)
         self.__attrs_init__(**kwargs)
 

@@ -27,7 +27,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 __all__ = (
     'And',
     'Array',
@@ -45,6 +45,7 @@ __all__ = (
     'Param',
     'Raw',
     'Select',
+    'Subquery',
     'Table',
     'Tuple',
     'Update',
