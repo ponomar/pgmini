@@ -260,6 +260,11 @@ def test_order_by_desc():
     assert build(S(L(1)).From(t).OrderBy(t.id.Desc()))[0] == 'SELECT 1 FROM t ORDER BY id DESC'
 
 
+def test_order_by_asc():
+    assert build(S(L(1)).From(t).OrderBy(t.id.Asc()))[0] == 'SELECT 1 FROM t ORDER BY id ASC'
+
+
+
 def test_order_by_nulls_last():
     assert (
         build(S(L(1)).From(t).OrderBy(t.id.NullsLast()))[0]
