@@ -18,7 +18,7 @@ class OrderByMX:
         if self._marks:
             marks = attrs.evolve(self._marks, order_by='ASC')
         else:
-            marks = Marks(order_by='DESC')
+            marks = Marks(order_by='ASC')
         return attrs.evolve(self, x_marks=marks)
 
     def NullsFirst(self):
