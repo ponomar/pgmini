@@ -1,11 +1,11 @@
 from contextvars import copy_context
-from typing import Literal as TypeLiteral
+from typing import Iterable, Literal as TypeLiteral
 
 import attrs
 
 from .array import Array, Tuple
 from .case import Case
-from .column import Excluded
+from .column import Column, Excluded
 from .delete import Delete
 from .func import F, Func
 from .insert import Insert
@@ -27,7 +27,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.11'
+__version__ = '0.1.12'
 __all__ = (
     'And',
     'Array',
@@ -71,7 +71,7 @@ class With:
     def Select(self, *columns) -> Select:
         return Select(*columns, x_with=self._subqueries)
 
-    def Insert(self, table: Table, columns: tuple) -> Insert:
+    def Insert(self, table: Table, columns: Iterable[str | Column]) -> Insert:
         return Insert(table, columns=columns, x_with=self._subqueries)
 
     def Update(self, table: Table) -> Update:

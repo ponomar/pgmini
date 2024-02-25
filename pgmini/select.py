@@ -52,11 +52,14 @@ class _Join:
                 raise ValueError
             sql = '%s LATERAL' % sql
 
-        return '%s %s ON %s' % (
+        res = '%s %s' % (
             sql,
             self.table._get_name() if cte else self.table._get_from_statement(params),
-            self.on_statement._build(params),
         )
+        with set_context({CTX_TABLES: ()}):  # should always prefix column with table name
+            res += ' ON %s' % self.on_statement._build(params)
+
+        return res
 
 
 @attrs.frozen
