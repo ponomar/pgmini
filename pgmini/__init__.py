@@ -27,7 +27,7 @@ from .utils import (
 )
 
 
-__version__ = '0.1.12'
+__version__ = '0.1.13'
 __all__ = (
     'And',
     'Array',
