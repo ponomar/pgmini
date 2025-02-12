@@ -63,17 +63,32 @@ class _Join:
 
 
 @attrs.frozen
-class _Union:
-    type: LiteralT['distinct', 'all'] = attrs.field(
-        validator=attrs.validators.in_({'distinct', 'all'}),
-    )
+class _UnionBase:
     select: Select
+    expr: str
 
     def _build(self, params: list | dict) -> str:
-        expr = 'UNION'
-        if self.type == 'all':
-            expr = '%s ALL' % expr
-        return '%s %s' % (expr, self.select._build(params))
+        return '%s %s' % (self.expr, self.select._build(params))
+
+
+@attrs.frozen
+class _UnionUnique(_UnionBase):
+    expr: str = 'UNION'
+
+
+@attrs.frozen
+class _UnionALL(_UnionBase):
+    expr: str = 'UNION ALL'
+
+
+@attrs.frozen
+class _Intersect(_UnionBase):
+    expr: str = 'INTERSECT'
+
+
+@attrs.frozen
+class _Except(_UnionBase):
+    expr: str = 'EXCEPT'
 
 
 def _convert_columns(values):
@@ -109,7 +124,7 @@ class Select(CompileABC, SelectMX):
         converter=_convert_offset,
         default=None,
     )
-    _union: tuple[_Union, ...] = attrs.field(alias='x_union', factory=tuple)
+    _union: tuple[_UnionBase, ...] = attrs.field(alias='x_union', factory=tuple)
     _cast: str | None = attrs.field(alias='x_cast', default=None)
     _alias: str | None = attrs.field(alias='x_alias', default=None)
 
@@ -208,10 +223,16 @@ class Select(CompileABC, SelectMX):
         return attrs.evolve(self, x_offset=value)
 
     def Union(self, other: Select):
-        return attrs.evolve(self, x_union=self._union + (_Union('distinct', select=other),))
+        return attrs.evolve(self, x_union=self._union + (_UnionUnique(other),))
 
     def UnionAll(self, other: Select):
-        return attrs.evolve(self, x_union=self._union + (_Union('all', select=other),))
+        return attrs.evolve(self, x_union=self._union + (_UnionALL(other),))
+
+    def Intersect(self, other: Select):
+        return attrs.evolve(self, x_union=self._union + (_Intersect(other),))
+
+    def Except(self, other: Select):
+        return attrs.evolve(self, x_union=self._union + (_Except(other),))
 
     def As(self, alias: str):
         return attrs.evolve(self, x_alias=alias)

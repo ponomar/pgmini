@@ -59,6 +59,15 @@ def test_from_where():
     assert build(q) == ('UPDATE t SET a = 0 FROM t2 WHERE t2.id = t.id', [])
 
 
+def test_from_subquery():
+    sq = S(t.id).From(t).Subquery('sq')
+    q = U(t).Set({'a': L(0)}).From(sq).Where(t.id == sq.id).Returning(t.id)
+    assert build(q) == (
+        'UPDATE t SET a = 0 FROM (SELECT id FROM t) AS sq WHERE t.id = sq.id RETURNING t.id',
+        [],
+    )
+
+
 def test_with():
     q1 = S(t.id).From(t).Where(t.id == L(1)).Subquery('s1', materialized=True)
     q2 = S(t2.id).From(t2).Where(t2.id == L(2)).Subquery('s2')

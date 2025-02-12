@@ -430,6 +430,22 @@ def test_union_order_by_and_limit_offset():
     )
 
 
+def test_intersect():
+    q = S(t.col1).From(t)
+    assert (
+        build(q.Intersect(S(t2.id).From(t2)))[0]
+        == 'SELECT col1 FROM t INTERSECT SELECT id FROM t2'
+    )
+
+
+def test_except():
+    q = S(t.col1).From(t)
+    assert (
+        build(q.Except(S(t2.id).From(t2)))[0]
+        == 'SELECT col1 FROM t EXCEPT SELECT id FROM t2'
+    )
+
+
 def test_with():
     sq = S(t.id, t.name).From(t).Where(t.name == 'xyz').Limit(5).Subquery('sq')
     sql, params = build(W(sq).Select(sq.id, sq.name).From(sq).Where(sq.id == 16))
