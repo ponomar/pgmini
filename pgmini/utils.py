@@ -26,7 +26,6 @@ class FromABC(ABC):
 
 
 RE_NEED_BRACKETS: Final[Pattern] = re.compile("[^a-z0-9$._']", flags=re.IGNORECASE)
-RE_PARENTHESIZED: Final[Pattern] = re.compile(r'\(.*\)')
 RE_FUNC_PARENTHESIZED: Final[Pattern] = re.compile(r'[a-z0-9_.]+\([^()]*\)', flags=re.IGNORECASE)
 RE_SINGLE_QUOTED: Final[Pattern] = re.compile("'[^']*'")
 RE_ARRAY: Final[Pattern] = re.compile(r'ARRAY\[.*\]')
@@ -93,3 +92,28 @@ def build_set(items: dict, params: list) -> str:
         parts.append('%s = %s' % (col, v._build(params)))
 
     return 'SET %s' % ', '.join(parts)
+
+
+def is_fully_enclosed_in_brackets(expr: str) -> bool:
+    expr = expr.strip()
+    if not (expr.startswith('(') and expr.endswith(')')):
+        return False
+
+    depth = 0
+    for i, c in enumerate(expr):
+        if c == "(":
+            depth += 1
+            # The first '('
+            if depth == 1 and i != 0:
+                return False
+
+        elif c == ")":
+            depth -= 1
+            # The matching ')'
+            if depth == 0 and i != len(expr) - 1:
+                return False
+
+        if depth < 0:
+            return False
+
+    return depth == 0

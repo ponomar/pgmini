@@ -12,7 +12,7 @@ from .operation import OperationMX
 from .operators import And, Or
 from .order_by import OrderByMX
 from .param import Param
-from .utils import ITERABLES, RE_NEED_BRACKETS, RE_PARENTHESIZED, CompileABC, SelectMX
+from .utils import ITERABLES, RE_NEED_BRACKETS, CompileABC, SelectMX, is_fully_enclosed_in_brackets
 
 
 _NOT_SET = object()
@@ -51,10 +51,11 @@ def _build(elem, params: list | dict) -> str:
 
     res = elem._build(params)
     if (
-        (isinstance(elem, Operation) and not RE_PARENTHESIZED.fullmatch(res))
+        (isinstance(elem, Operation) and not is_fully_enclosed_in_brackets(res))
         or isinstance(elem, Select)
     ):
         res = '(%s)' % res
+
     return res
 
 
@@ -137,7 +138,7 @@ class OperationSlice(Operation):
         if (
             self._left._marks is not None
             and self._left._marks.cast is not None
-            and not RE_PARENTHESIZED.fullmatch(part1)
+            and not is_fully_enclosed_in_brackets(part1)
         ) or RE_NEED_BRACKETS.search(part1):
             part1 = '(%s)' % part1
 

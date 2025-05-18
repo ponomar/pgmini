@@ -202,3 +202,15 @@ def test_multiple():
 ])
 def test_other(operation, res: str, updated: list):
     assert build(operation) == (res, updated)
+
+
+def test_chain():
+    val = t.col
+    val -= 'k1'
+    val -= 'k2'
+    val = val.Op('||', F.jsonb_build_object('k3', 'v3'))
+    val -= 'k4'
+
+    sql, params = build(val)
+    assert sql == '(((t.col - $1) - $2) || JSONB_BUILD_OBJECT($3, $4)) - $5'
+    assert params == ['k1', 'k2', 'k3', 'v3', 'k4']

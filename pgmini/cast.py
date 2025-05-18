@@ -6,9 +6,9 @@ from .utils import (
     RE_ARRAY,
     RE_FUNC_PARENTHESIZED,
     RE_NEED_BRACKETS,
-    RE_PARENTHESIZED,
     RE_PSYCOPG_PARAM,
     RE_SINGLE_QUOTED,
+    is_fully_enclosed_in_brackets,
 )
 
 
@@ -24,7 +24,7 @@ class CastMX:
 def build_cast(value: str, cast: str) -> str:
     if (
         RE_NEED_BRACKETS.search(value)
-        and not RE_PARENTHESIZED.fullmatch(value)
+        and not is_fully_enclosed_in_brackets(value)
         and not RE_FUNC_PARENTHESIZED.fullmatch(value)
         and not RE_SINGLE_QUOTED.fullmatch(value)
         and not RE_ARRAY.fullmatch(value)

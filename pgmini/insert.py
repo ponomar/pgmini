@@ -12,11 +12,11 @@ from .utils import (
     CTX_FORCE_CAST_BRACKETS,
     RE_FUNC_PARENTHESIZED,
     RE_NEED_BRACKETS,
-    RE_PARENTHESIZED,
     CompileABC,
     build_returning,
     build_set,
     build_with,
+    is_fully_enclosed_in_brackets,
     set_context,
 )
 
@@ -29,7 +29,7 @@ def _convert_do_update(value):
 def _wrap_index_elements_with_brackets(value: str) -> str:
     if (
         RE_NEED_BRACKETS.search(value)
-        and not RE_PARENTHESIZED.fullmatch(value)
+        and not is_fully_enclosed_in_brackets(value)
         and not RE_FUNC_PARENTHESIZED.fullmatch(value)
     ):
         value = '(%s)' % value
