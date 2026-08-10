@@ -71,6 +71,21 @@ t = Table('t')
         'ARRAY_AGG(t.id ORDER BY t.id DESC NULLS FIRST, t.id2 + $1)', [22],
         id='order by complex',
     ),
+    pytest.param(
+        F.percentile_disc(t.fld).WithinGroup(t.fld2),
+        'PERCENTILE_DISC(t.fld) WITHIN GROUP (ORDER BY t.fld2)', [],
+        id='percentile_disc within group',
+    ),
+    pytest.param(
+        F.percentile_cont(L(0.5)).WithinGroup(t.fld2.Desc().NullsLast()).As('p50'),
+        'PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.fld2 DESC NULLS LAST) AS p50', [],
+        id='percentile_cont within group',
+    ),
+    pytest.param(
+        F.percentile_cont(0.9).WithinGroup(t.fld, t.fld2),
+        'PERCENTILE_CONT($1) WITHIN GROUP (ORDER BY t.fld, t.fld2)', [0.9],
+        id='within group multiple',
+    ),
 ])
 def test(func, res: str, updated: list):
     assert build(func) == (res, updated)

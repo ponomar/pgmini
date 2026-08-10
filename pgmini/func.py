@@ -77,10 +77,17 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
     _over: Over | None = attrs.field(alias='x_over', default=None)
     _where: tuple[CompileABC, ...] = attrs.field(alias='x_where', factory=tuple)
     _order_by: tuple[CompileABC, ...] = attrs.field(alias='x_order_by', factory=tuple)
+    _within_group: tuple[CompileABC, ...] = attrs.field(alias='x_within_group', factory=tuple)
     _marks: MARKS_TYPE = MARKS_FIELD
 
     def Over(self, *, partition_by=None, order_by=None):
         return attrs.evolve(self, x_over=Over(partition_by=partition_by, order_by=order_by))
+
+    def WithinGroup(self, *statements):
+        return attrs.evolve(
+            self,
+            x_within_group=tuple(prepare_column(i) for i in statements),
+        )
 
     def Where(self, *statements: CompileABC):
         return attrs.evolve(self, x_where=statements)
@@ -109,9 +116,12 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
                     )
 
         parts = ['%s(%s)' % (self._name, args)]
+        if self._within_group:
+            parts.append('WITHIN GROUP (ORDER BY %s)' % ', '.join(
+                i._build(params) for i in self._within_group
+            ))
         if self._over is not None:
             parts.append(self._over.build(params))
-
         if self._where:
             parts.append('FILTER (%s)' % build_where(self._where, params=params))
 

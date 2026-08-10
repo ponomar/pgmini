@@ -446,6 +446,36 @@ def test_except():
     )
 
 
+def test_for_update():
+    assert build(S(t.id).From(t).ForUpdate()) == ('SELECT id FROM t FOR UPDATE', [])
+
+
+def test_for_update_skip_locked():
+    assert (
+        build(S(t.id).From(t).Where(t.id == L(1)).Limit(L(5)).ForUpdate(skip_locked=True))[0]
+        == 'SELECT id FROM t WHERE id = 1 LIMIT 5 FOR UPDATE SKIP LOCKED'
+    )
+
+
+def test_with_for_update():
+    sq = S(t.id).From(t).Where(t.id == L(7)).ForUpdate().Subquery('sq')
+    assert (
+        build(W(sq).Select(sq.id).From(sq))[0]
+        == 'WITH sq AS (SELECT id FROM t WHERE id = 7 FOR UPDATE) SELECT id FROM sq'
+    )
+
+
+def test_with_for_update_skip_locked():
+    sq = S(t.id).From(t).Limit(L(1)).ForUpdate(skip_locked=True).Subquery('sq')
+    assert (
+        build(W(sq).Select(sq.id).From(sq))[0]
+        == compact('''
+            WITH sq AS (SELECT id FROM t LIMIT 1 FOR UPDATE SKIP LOCKED)
+            SELECT id FROM sq
+        ''')
+    )
+
+
 def test_with():
     sq = S(t.id, t.name).From(t).Where(t.name == 'xyz').Limit(5).Subquery('sq')
     sql, params = build(W(sq).Select(sq.id, sq.name).From(sq).Where(sq.id == 16))
@@ -548,6 +578,19 @@ def test_select_star_from_function():
 def test_select_star_from_aliased_function():
     f = F.unnest(P([1]).Cast('int[]')).As('w(a)')
     assert build(S(f.STAR).From(f)) == ('SELECT * FROM UNNEST($1::int[]) AS w(a)', [[1]])
+
+
+def test_select_from_table_and_series():
+    f = F.unnest(t.tags).As('x(tag)')
+    assert build(S(t.id, f.tag).From(t, f)) == (
+        'SELECT t.id, tag FROM t, UNNEST(t.tags) AS x(tag)',
+        [],
+    )
+
+
+def test_select_star_from_table_and_series():
+    f = F.unnest(t.tags)
+    assert build(S(t.STAR).From(t, f)) == ('SELECT t.* FROM t, UNNEST(t.tags)', [])
 
 
 def test_distinct_on():

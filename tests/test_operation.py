@@ -111,6 +111,22 @@ def test_multiple():
         t.col2.Any(P([1, 2]).Cast('int[]')), 't.col2 = ANY($1::int[])',
         [[1, 2]], id='ANY param',
     ),
+    pytest.param(
+        t.col.LikeAny(obj5 := ['bla%', '%bla']), 't.col LIKE ANY($1)', [obj5],
+        id='LIKE ANY raw',
+    ),
+    pytest.param(
+        t.col.LikeAny(L(['blabla'])), "t.col LIKE ANY(ARRAY['blabla'])", [],
+        id='LIKE ANY literal',
+    ),
+    pytest.param(
+        t.col.LikeAny(P(['bla%']).Cast('text[]')), 't.col LIKE ANY($1::text[])', [['bla%']],
+        id='LIKE ANY param',
+    ),
+    pytest.param(
+        t.col.IlikeAny(obj6 := ['%abc%']), 't.col ILIKE ANY($1)', [obj6],
+        id='ILIKE ANY raw',
+    ),
     pytest.param(t.col.Op('->', L('path')), "t.col -> 'path'", [], id='custom'),
     pytest.param(
         t.col.Op('#>', L(['l1', 'l2'])), "t.col #> ARRAY['l1', 'l2']", [],

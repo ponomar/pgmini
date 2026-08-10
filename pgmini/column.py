@@ -31,6 +31,7 @@ class Column(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Se
         res = self._name
         if (
             not CTX_DISABLE_TABLE_IN_COLUMN.get()
+            and self._table is not None
             and (
                 isinstance(self._table, _Excluded)
                 or len(CTX_TABLES.get()) > 1

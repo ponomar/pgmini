@@ -43,6 +43,11 @@ class OperationMX:
         from .operations import OperationSlice
         return OperationSlice(self, right=item)
 
+    def __iter__(self):
+        # without __iter__ python falls back to __getitem__ which never raises IndexError,
+        # so iteration/unpacking would hang forever
+        raise TypeError('%s object is not iterable' % type(self).__name__)
+
     def __setitem__(self, item):
         raise RuntimeError
 
@@ -68,6 +73,14 @@ class OperationMX:
     def Any(self, other):
         from .operations import OperationAny
         return OperationAny(self, right=other)
+
+    def LikeAny(self, other):
+        from .operations import OperationAny
+        return OperationAny(self, right=other, operator='LIKE')
+
+    def IlikeAny(self, other):
+        from .operations import OperationAny
+        return OperationAny(self, right=other, operator='ILIKE')
 
     def Between(self, start, end):
         from .operations import OperationBetween

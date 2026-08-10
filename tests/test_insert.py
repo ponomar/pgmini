@@ -1,3 +1,5 @@
+import pytest
+
 from pgmini import (
     NULL,
     And,
@@ -200,3 +202,9 @@ def test_on_conflict_do_update_multiple():
             col4 = excluded.col15 * t.col44::float
     ''')
     assert params == [12, 5, 88]
+
+
+def test_raise_error():
+    mp = {'id': t.id, 'dt': t.dt}
+    with pytest.raises(TypeError):
+        Ins(t2, *t.col).Select(S(*mp.values()).From(t))

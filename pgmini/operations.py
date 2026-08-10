@@ -229,11 +229,13 @@ class OperationBetween(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, Opera
 
 @attrs.frozen(eq=False)
 class OperationAny(Operation):
+    _operator: str = attrs.field(alias='operator', default='=')
+
     def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):
             return alias
 
-        expr = '%s = ANY(%%s)' % _wrap_operation_member(self._left)
+        expr = '%s %s ANY(%%s)' % (_wrap_operation_member(self._left), self._operator)
         res = expr % (
             _build(self._left, params),
             _build(self._right, params),

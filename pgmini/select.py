@@ -91,6 +91,20 @@ class _Except(_UnionBase):
     expr: str = 'EXCEPT'
 
 
+@attrs.frozen
+class _ForUpdate:
+    skip_locked: bool = attrs.field(
+        validator=attrs.validators.in_({True, False}),
+        default=False,
+    )
+
+    def _build(self) -> str:
+        res = 'FOR UPDATE'
+        if self.skip_locked:
+            res = '%s SKIP LOCKED' % res
+        return res
+
+
 def _convert_columns(values):
     return tuple(prepare_column(i) for i in values)
 
@@ -125,6 +139,7 @@ class Select(CompileABC, SelectMX):
         default=None,
     )
     _union: tuple[_UnionBase, ...] = attrs.field(alias='x_union', factory=tuple)
+    _for_update: _ForUpdate | None = attrs.field(alias='x_for_update', default=None)
     _cast: str | None = attrs.field(alias='x_cast', default=None)
     _alias: str | None = attrs.field(alias='x_alias', default=None)
 
@@ -234,6 +249,9 @@ class Select(CompileABC, SelectMX):
     def Except(self, other: Select):
         return attrs.evolve(self, x_union=self._union + (_Except(other),))
 
+    def ForUpdate(self, *, skip_locked: bool = False):
+        return attrs.evolve(self, x_for_update=_ForUpdate(skip_locked=skip_locked))
+
     def As(self, alias: str):
         return attrs.evolve(self, x_alias=alias)
 
@@ -306,6 +324,9 @@ class Select(CompileABC, SelectMX):
         if self._union:
             for obj in self._union:
                 parts.append(obj._build(params))
+
+        if self._for_update is not None:
+            parts.append(self._for_update._build())
 
         res = ' '.join(parts)
 

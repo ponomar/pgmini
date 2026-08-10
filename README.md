@@ -134,6 +134,18 @@ q3 = Select(f.STAR).From(f)
 q4 = Select(Case((t.id == 1, 'first'), (t.id == 2, 'second'), Else='third').As('val')).From(t)
 
 q5 = Select(Array([t.id, 5, 7])).From(t)
+
+q6 = Select(
+    F.percentile_disc(t.fld).WithinGroup(t.fld2),
+    F.percentile_cont(Literal(0.5)).WithinGroup(t.fld2.Desc()).As('p50'),
+).From(t)
+# SELECT PERCENTILE_DISC(fld) WITHIN GROUP (ORDER BY fld2), 
+#        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY fld2 DESC) AS p50 FROM tbl
+
+# table-series join
+f = F.unnest(t.tags).As('x(tag)')
+q7 = Select(t.id, f.tag).From(t, f)
+# SELECT tbl.id, tag FROM tbl, UNNEST(tbl.tags) AS x(tag)
 ```
 
 #### ORDER BY / GROUP BY / HAVING / DISTINCT / DISTINCT ON
@@ -177,6 +189,8 @@ q = (
         t.id.Any(list(range(1_000))),
         t.name.Like('%ABC%'),
         t.name.Ilike('%abc%'),
+        t.name.LikeAny(['%ABC%', '%XYZ%']),  # name LIKE ANY($1)
+        t.name.IlikeAny(Literal(['%abc%'])),  # name ILIKE ANY(ARRAY['%abc%'])
     )
     .From(t)
 )
@@ -251,6 +265,22 @@ q = Select(sq.id).From(sq).Where(sq.id > 50)
 # CTE
 q = With(sq).Select(sq.id).From(sq).Where(sq.id > 50).Limit(2)
 # WITH sq AS (SELECT id FROM tbl WHERE id < $1) SELECT id FROM sq WHERE id > $2 LIMIT $3
+```
+
+#### FOR UPDATE
+```python
+t = Table('tbl')
+
+q1 = Select(t.id).From(t).ForUpdate()
+# SELECT id FROM tbl FOR UPDATE
+
+q2 = Select(t.id).From(t).ForUpdate(skip_locked=True)
+# SELECT id FROM tbl FOR UPDATE SKIP LOCKED
+
+# works within CTE as well
+sq = Select(t.id).From(t).Limit(1).ForUpdate(skip_locked=True).Subquery('sq')
+q3 = With(sq).Select(sq.id).From(sq)
+# WITH sq AS (SELECT id FROM tbl LIMIT $1 FOR UPDATE SKIP LOCKED) SELECT id FROM sq
 ```
 
 ***
