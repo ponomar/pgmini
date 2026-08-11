@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pgmini"
-version = "0.1.14"
+version = "0.1.15"
 description = "Build sql for PostgreSQL"
 authors = ["Vitalii Ponomar"]
 license = "MIT"

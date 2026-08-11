@@ -30,6 +30,7 @@ def _convert_returning(value):
 class Update(CompileABC):
     _table: Table = attrs.field(alias='table')
     _with: tuple[Subquery, ...] = attrs.field(alias='x_with', factory=tuple)
+    _with_recursive: bool = attrs.field(alias='x_with_recursive', default=False)
     _set: dict[str | Column, CompileABC] | None = attrs.field(
         alias='x_set',
         converter=_convert_set,
@@ -45,7 +46,7 @@ class Update(CompileABC):
 
     @_from.validator
     def _vld_from(self, attribute, value):
-        if bad := [i for i in value if not isinstance(i, FromABC)]:
+        if (bad := next((i for i in value if not isinstance(i, FromABC)), None)) is not None:
             raise TypeError(bad)
 
     def Set(self, items: dict[str | Column, Any]):
@@ -73,7 +74,7 @@ class Update(CompileABC):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(build_with(self._with, params))
+            parts.append(build_with(self._with, params, recursive=self._with_recursive))
 
         parts.extend([
             'UPDATE %s' % self._table._name,

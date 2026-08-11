@@ -66,15 +66,18 @@ def wrap_brackets_if_needed(item: str, obj) -> str:
     return item
 
 
-def build_with(statements, params: list) -> str:
-    return 'WITH %s' % ', '.join(i._get_with_statement(params) for i in statements)
+def build_with(statements, params: list, recursive: bool = False) -> str:
+    return '%s %s' % (
+        'WITH RECURSIVE' if recursive else 'WITH',
+        ', '.join(i._get_with_statement(params) for i in statements),
+    )
 
 
-def build_from(statements, params: list) -> str:
-    return 'FROM %s' % ', '.join(
+def build_from(statements, params: list, keyword: str = 'FROM') -> str:
+    return '%s %s' % (keyword, ', '.join(
         i._alias if any(i is t for t in CTX_CTE.get()) else i._get_from_statement(params)
         for i in statements
-    )
+    ))
 
 
 def build_returning(columns, params: list) -> str:

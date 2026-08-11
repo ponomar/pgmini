@@ -34,7 +34,9 @@ class Case(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Sele
     def _vld_statements(self, attribute, value):
         if not value:
             raise ValueError
-        elif bad := [op for op, _ in value if not isinstance(op, CompileABC)]:
+        elif (
+            bad := next((op for op, _ in value if not isinstance(op, CompileABC)), None)
+        ) is not None:
             raise TypeError(bad)
 
     def __init__(self, *statements: tuple[Any, Any], Else=None, **kwargs):

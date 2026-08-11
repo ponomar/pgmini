@@ -3,6 +3,7 @@ import pytest
 from pgmini import (
     And,
     Func as F,
+    GroupingSets,
     Literal as L,
     Param as P,
     Raw,
@@ -96,6 +97,32 @@ def test_left_join_aliased():
     )
 
 
+def test_right_join():
+    assert (
+        build(S(t.id).From(t).RightJoin(t2, t2.id == t.id))[0]
+        == 'SELECT t.id FROM t RIGHT JOIN t2 ON t2.id = t.id'
+    )
+
+
+def test_full_join():
+    assert (
+        build(S(t.id).From(t).FullJoin(t2, t2.id == t.id))[0]
+        == 'SELECT t.id FROM t FULL JOIN t2 ON t2.id = t.id'
+    )
+
+
+def test_cross_join():
+    assert build(S(t.id).From(t).CrossJoin(t2))[0] == 'SELECT t.id FROM t CROSS JOIN t2'
+
+
+def test_cross_join_lateral():
+    f = F.unnest(t.tags).As('x(tag)')
+    assert (
+        build(S(t.id, f.tag).From(t).CrossJoinLateral(f))[0]
+        == 'SELECT t.id, x.tag FROM t CROSS JOIN LATERAL UNNEST(t.tags) AS x(tag)'
+    )
+
+
 def test_join_multiple():
     t4, t5 = T('t4'), T('t5')
     assert build(
@@ -172,6 +199,24 @@ def test_group_by_not_chainable():
     q = S(t.id).From(t).GroupBy(t.id)
     with pytest.raises(Exception):
         q.GroupBy(t.name)
+
+
+def test_group_by_grouping_sets():
+    q = S(t.a, t.b, F.count('*')).From(t).GroupBy(GroupingSets((t.a, t.b), t.a, ()))
+    assert build(q) == (
+        'SELECT a, b, COUNT(*) FROM t GROUP BY GROUPING SETS ((a, b), (a), ())',
+        [],
+    )
+
+
+def test_group_by_rollup():
+    q = S(t.a, t.b, F.count('*')).From(t).GroupBy(F.rollup(t.a, t.b))
+    assert build(q) == ('SELECT a, b, COUNT(*) FROM t GROUP BY ROLLUP(a, b)', [])
+
+
+def test_group_by_cube():
+    q = S(t.a, F.count('*')).From(t).GroupBy(F.cube(t.a, t.b))
+    assert build(q) == ('SELECT a, COUNT(*) FROM t GROUP BY CUBE(a, b)', [])
 
 
 def test_group_by_alias():
@@ -485,6 +530,27 @@ def test_for_update_nowait_and_skip_locked_forbidden():
         S(t.id).From(t).ForUpdate(nowait=True, skip_locked=True)
 
 
+def test_for_no_key_update():
+    assert (
+        build(S(t.id).From(t).ForNoKeyUpdate())[0]
+        == 'SELECT id FROM t FOR NO KEY UPDATE'
+    )
+
+
+def test_for_share():
+    assert (
+        build(S(t.id).From(t, t2).ForShare(of=t, nowait=True))[0]
+        == 'SELECT t.id FROM t, t2 FOR SHARE OF t NOWAIT'
+    )
+
+
+def test_for_key_share():
+    assert (
+        build(S(t.id).From(t).ForKeyShare(skip_locked=True))[0]
+        == 'SELECT id FROM t FOR KEY SHARE SKIP LOCKED'
+    )
+
+
 def test_with_for_update():
     sq = S(t.id).From(t).Where(t.id == L(7)).ForUpdate().Subquery('sq')
     assert (
@@ -502,6 +568,24 @@ def test_with_for_update_skip_locked():
             SELECT id FROM sq
         ''')
     )
+
+
+def test_with_recursive():
+    tree = T('tree')
+    sq = (
+        S(L(1).As('n'))
+        .UnionAll(S(tree.n + 1).From(tree).Where(tree.n < 10))
+        .Subquery('tree')
+    )
+    sql, params = build(W(sq, recursive=True).Select(sq.n).From(sq))
+    assert sql == compact('''
+        WITH RECURSIVE tree AS (
+            SELECT 1 AS n
+            UNION ALL SELECT n + $1 FROM tree WHERE n < $2
+        )
+        SELECT n FROM tree
+    ''')
+    assert params == [1, 10]
 
 
 def test_with():

@@ -40,7 +40,7 @@ class Literal(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, S
         if isinstance(value, tuple):
             if not value:
                 raise ValueError(value)
-            elif bad := [i for i in value if type(i) not in _TYPES]:
+            elif (bad := next((i for i in value if type(i) not in _TYPES), None)) is not None:
                 raise TypeError(bad)
 
     def _build(self, params: list | dict) -> str:

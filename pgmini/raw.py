@@ -1,3 +1,5 @@
+from typing import Final
+
 import attrs
 
 from .alias import AliasMX, extract_alias
@@ -31,3 +33,6 @@ class Raw(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Selec
 
     def __hash__(self):
         return id(self)
+
+
+DEFAULT: Final[Raw] = Raw('DEFAULT')

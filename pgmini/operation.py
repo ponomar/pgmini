@@ -62,6 +62,14 @@ class OperationMX:
         from .operations import OperationMath
         return OperationMath(self, right=other, operator='IS NOT')
 
+    def IsDistinctFrom(self, other):
+        from .operations import OperationMath
+        return OperationMath(self, right=other, operator='IS DISTINCT FROM')
+
+    def IsNotDistinctFrom(self, other):
+        from .operations import OperationMath
+        return OperationMath(self, right=other, operator='IS NOT DISTINCT FROM')
+
     def In(self, other):
         from .operations import OperationIn
         return OperationIn(self, items=other)
@@ -73,6 +81,10 @@ class OperationMX:
     def Any(self, other):
         from .operations import OperationAny
         return OperationAny(self, right=other)
+
+    def All(self, other):
+        from .operations import OperationAny
+        return OperationAny(self, right=other, keyword='ALL')
 
     def LikeAny(self, other):
         from .operations import OperationAny
@@ -93,6 +105,14 @@ class OperationMX:
     def Ilike(self, other):
         from .operations import OperationLike
         return OperationLike(self, right=other, operator='ILIKE')
+
+    def NotLike(self, other):
+        from .operations import OperationLike
+        return OperationLike(self, right=other, operator='NOT LIKE')
+
+    def NotIlike(self, other):
+        from .operations import OperationLike
+        return OperationLike(self, right=other, operator='NOT ILIKE')
 
     def Op(self, operator: str, other):
         from .operations import OperationCustom

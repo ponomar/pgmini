@@ -45,7 +45,13 @@ class OnConflict:
         converter=_convert_do_update,
         default=None,
     )
+    do_update_where: CompileABC | None = attrs.field(default=None)
     do_nothing: bool = attrs.field(validator=attrs.validators.in_({True, False}), default=False)
+
+    @do_update_where.validator
+    def _vld_do_update_where(self, attribute, value):
+        if value is not None and self.do_update is None:
+            raise ValueError('do_update_where requires do_update')
 
     @index_where.validator
     def _vld_index(self, attribute, value):
@@ -91,6 +97,8 @@ class OnConflict:
                 'DO UPDATE %s'
                 % build_set(self.do_update, params=params)
             )
+            if self.do_update_where is not None:
+                res.append('WHERE %s' % self.do_update_where._build(params))
 
         if self.do_nothing:
             res.append('DO NOTHING')
@@ -114,6 +122,7 @@ class Insert(CompileABC):
     _table: Table = attrs.field(alias='table')
     _columns: Iterable[str | Column] = attrs.field(alias='columns')
     _with: tuple[Subquery, ...] = attrs.field(alias='x_with', factory=tuple)
+    _with_recursive: bool = attrs.field(alias='x_with_recursive', default=False)
     _values: tuple[tuple, ...] = attrs.field(
         alias='x_values',
         converter=_convert_values,
@@ -145,7 +154,9 @@ class Insert(CompileABC):
             for row in self._values:
                 if len(row) != len(self._columns):
                     raise ValueError((len(row), len(self._columns)))
-                elif bad := [i for i in row if not isinstance(i, CompileABC)]:
+                elif (
+                    bad := next((i for i in row if not isinstance(i, CompileABC)), None)
+                ) is not None:
                     raise TypeError(bad)
 
     def Values(self, *rows):
@@ -160,6 +171,7 @@ class Insert(CompileABC):
         index_elements: tuple[str | Column, ...] | None = None,
         index_where: CompileABC | None = None,
         do_update: dict | None = None,
+        do_update_where: CompileABC | None = None,
         do_nothing: bool = False,
     ):
         return attrs.evolve(self, x_on_conflict=OnConflict(
@@ -167,6 +179,7 @@ class Insert(CompileABC):
             index_elements=index_elements,
             index_where=index_where,
             do_update=do_update,
+            do_update_where=do_update_where,
             do_nothing=do_nothing,
         ))
 
@@ -182,7 +195,7 @@ class Insert(CompileABC):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(build_with(self._with, params))
+            parts.append(build_with(self._with, params, recursive=self._with_recursive))
 
         with set_context({CTX_DISABLE_TABLE_IN_COLUMN: True}):
             parts.append('INSERT INTO %s (%s)' % (

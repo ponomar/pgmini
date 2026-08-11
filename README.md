@@ -26,8 +26,10 @@ to avoid collisions with python reserved words.
 - [INSERT](#insert)
 - [UPDATE](#update)
 - [DELETE](#delete)
+- [MERGE](#merge)
+- [VALUES as a FROM item](#values-as-a-from-item)
 - [Subqueries and CTE (WITH)](#subqueries-and-cte-with)
-- [Row locking (FOR UPDATE)](#row-locking-for-update)
+- [Row locking (FOR UPDATE / FOR SHARE)](#row-locking-for-update--for-share)
 - [API cheat sheet](#api-cheat-sheet)
 
 ## Installation
@@ -184,8 +186,10 @@ useful to zip query results with names.
 
 ### JOIN
 
-`Join` / `LeftJoin` / `JoinLateral` / `LeftJoinLateral`.
-The ON condition can be any expression or `True` (compiles to `ON TRUE`).
+`Join` (inner) / `LeftJoin` / `RightJoin` / `FullJoin` / `CrossJoin` and lateral
+variants `JoinLateral` / `LeftJoinLateral` / `CrossJoinLateral`.
+The ON condition can be any expression or `True` (compiles to `ON TRUE`);
+`CrossJoin` takes no condition.
 
 ```python
 sq = Select(t2.name).From(t2).Where(t2.id == t.id).Subquery('sq')
@@ -202,6 +206,19 @@ q = (
 # JOIN LATERAL (SELECT name FROM t2 WHERE id = t.id) AS sq ON TRUE
 # LEFT JOIN LATERAL (SELECT name FROM t2 WHERE id = t.id) AS sq ON sq.name != $2
 # params: ['active', 'test']
+
+Select(t.id).From(t).RightJoin(t2, t2.id == t.id)
+# SELECT t.id FROM t RIGHT JOIN t2 ON t2.id = t.id
+
+Select(t.id).From(t).FullJoin(t2, t2.id == t.id)
+# SELECT t.id FROM t FULL JOIN t2 ON t2.id = t.id
+
+Select(t.id).From(t).CrossJoin(t2)
+# SELECT t.id FROM t CROSS JOIN t2
+
+f = F.unnest(t.tags).As('x(tag)')
+Select(t.id, f.tag).From(t).CrossJoinLateral(f)
+# SELECT t.id, x.tag FROM t CROSS JOIN LATERAL UNNEST(t.tags) AS x(tag)
 ```
 
 ### Table-series join (FROM table, UNNEST(...))
@@ -231,6 +248,23 @@ Select(t.id.As('xyz')).From(t).GroupBy(Raw('xyz'))
 ```
 
 `GroupBy` can be set only once; `Having` is chainable (works as AND).
+
+#### GROUPING SETS / ROLLUP / CUBE
+
+```python
+from pgmini import GroupingSets
+
+Select(t.brand, t.size, F.sum(t.qty)).From(t).GroupBy(
+    GroupingSets((t.brand, t.size), t.brand, ()),
+)
+# SELECT brand, size, SUM(qty) FROM t GROUP BY GROUPING SETS ((brand, size), (brand), ())
+
+Select(t.brand, t.size, F.sum(t.qty)).From(t).GroupBy(F.rollup(t.brand, t.size))
+# SELECT brand, size, SUM(qty) FROM t GROUP BY ROLLUP(brand, size)
+
+Select(t.brand, F.sum(t.qty)).From(t).GroupBy(F.cube(t.brand, t.size))
+# SELECT brand, SUM(qty) FROM t GROUP BY CUBE(brand, size)
+```
 
 ### ORDER BY / LIMIT / OFFSET
 
@@ -297,6 +331,10 @@ Everything else is a method:
 | `t.col.In(Select(...))` | `col IN (SELECT ...)` |
 | `t.col.NotIn(...)` | `col NOT IN (...)` |
 | `t.col.Any([1, 2])` | `col = ANY($1)` — single param, faster plan cache than IN |
+| `t.col.All([1, 2])` | `col = ALL($1)` |
+| `t.col.IsDistinctFrom(x)` | `col IS DISTINCT FROM ...` — null-safe compare |
+| `t.col.IsNotDistinctFrom(x)` | `col IS NOT DISTINCT FROM ...` |
+| `t.col.NotLike('%x%')` / `t.col.NotIlike('%x%')` | `col NOT LIKE $1` / `col NOT ILIKE $1` |
 | `t.col.LikeAny(['a%', '%b'])` | `col LIKE ANY($1)` |
 | `t.col.IlikeAny(Literal(['%a%']))` | `col ILIKE ANY(ARRAY['%a%'])` |
 | `t.col.Between(1, 2)` | `col BETWEEN $1 AND $2` |
@@ -351,9 +389,13 @@ F.date_trunc(Literal('day'), t.created)  # DATE_TRUNC('day', t.created)
 F.row_number().Over()                                   # ROW_NUMBER() OVER ()
 F.count(t.id).Over(partition_by=t.name, order_by=t.age.Desc())
 # COUNT(t.id) OVER (PARTITION BY t.name ORDER BY t.age DESC)
+
+F.sum(t.x).Over(order_by=t.id, frame='ROWS BETWEEN 1 PRECEDING AND CURRENT ROW')
+# SUM(t.x) OVER (ORDER BY t.id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ```
 
 `partition_by` / `order_by` take a single expression or an iterable of them.
+`frame` is a raw frame clause string; it must start with `ROWS`, `RANGE` or `GROUPS`.
 
 ### Aggregates: FILTER, ORDER BY, WITHIN GROUP
 
@@ -410,6 +452,15 @@ q = (
 # RETURNING t.*
 ```
 
+`DEFAULT` inserts the column default:
+
+```python
+from pgmini import DEFAULT
+
+Insert(t, columns=('id', 'name')).Values((1, DEFAULT))
+# INSERT INTO t (id, name) VALUES ($1, DEFAULT)
+```
+
 ### INSERT ... SELECT
 
 ```python
@@ -429,9 +480,10 @@ q = Insert(t, ('name', 'status')).Select(Select(
 
 ### ON CONFLICT
 
-`OnConflict(*, constraint=None, index_elements=None, index_where=None, do_update=None, do_nothing=False)`.
+`OnConflict(*, constraint=None, index_elements=None, index_where=None, do_update=None, do_update_where=None, do_nothing=False)`.
 Exactly one of `do_update` / `do_nothing` is required.
 `Excluded('col')` / `Excluded(t.col)` references the excluded row in `do_update`.
+`do_update_where` makes the update conditional.
 
 ```python
 from pgmini import Excluded
@@ -454,6 +506,13 @@ Insert(t, (t.id,)).OnConflict(do_update={
 })
 # INSERT INTO t (id) ON CONFLICT DO UPDATE
 # SET col1 = $1, col2 = t.col2 + $2, col3 = excluded.col8::int * $3
+
+Insert(t, (t.id,)).OnConflict(
+    index_elements=(t.id,),
+    do_update={t.cnt: Excluded(t.cnt)},
+    do_update_where=t.cnt < 100,
+)
+# INSERT INTO t (id) ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $1
 ```
 
 ## UPDATE
@@ -506,6 +565,69 @@ Delete(t).Where(t.id == 25).Returning(t.id)
 # DELETE FROM t WHERE t.id = $1 RETURNING t.id
 ```
 
+### DELETE ... USING (join-delete)
+
+```python
+Delete(t).Using(t2).Where(t2.id == t.id, t2.status == 'deleted')
+# DELETE FROM t USING t2 WHERE t2.id = t.id AND t2.status = $1
+
+sq = Select(t2.id).From(t2).Subquery('sq')
+Delete(t).Using(sq).Where(sq.id == t.id).Returning(t.id)
+# DELETE FROM t USING (SELECT id FROM t2) AS sq WHERE sq.id = t.id RETURNING t.id
+```
+
+## MERGE
+
+PostgreSQL 15+. `Merge(target).Using(source, on)` plus WHEN clauses in order;
+each accepts an optional `condition` (compiles to `WHEN ... AND condition THEN`).
+Available WHEN methods: `WhenMatchedUpdate(dict)`, `WhenMatchedDelete()`,
+`WhenMatchedDoNothing()`, `WhenNotMatchedInsert(columns, values)`,
+`WhenNotMatchedDoNothing()`. `Returning` (PostgreSQL 17+) supports `F.merge_action()`.
+
+```python
+from pgmini import Merge
+
+src = Table('src')
+q = (
+    Merge(t).Using(src, t.id == src.id)
+    .WhenMatchedUpdate({t.name: src.name})
+    .WhenNotMatchedInsert(('id', 'name'), (src.id, src.name))
+)
+# MERGE INTO t USING src ON t.id = src.id
+# WHEN MATCHED THEN UPDATE SET name = src.name
+# WHEN NOT MATCHED THEN INSERT (id, name) VALUES (src.id, src.name)
+
+# source can be a subquery, Values or a CTE; conditions and RETURNING:
+q = (
+    Merge(t).Using(src, t.id == src.id)
+    .WhenMatchedDelete(condition=src.deleted == Literal(True))
+    .WhenMatchedUpdate({t.name: src.name})
+    .WhenNotMatchedDoNothing()
+    .Returning(t.id, F.merge_action())
+)
+# MERGE INTO t USING src ON t.id = src.id
+# WHEN MATCHED AND src.deleted IS TRUE THEN DELETE
+# WHEN MATCHED THEN UPDATE SET name = src.name
+# WHEN NOT MATCHED THEN DO NOTHING
+# RETURNING t.id, MERGE_ACTION()
+```
+
+## VALUES as a FROM item
+
+`Values(*rows).As('v(col1, col2)')` — a table literal usable in FROM, JOIN
+or as a MERGE source. The alias with the column list is required to reference columns.
+
+```python
+from pgmini import Values
+
+v = Values((1, 'a'), (2, 'b')).As('v(id, name)')
+Select(v.id, v.name).From(v)
+# SELECT id, name FROM (VALUES ($1, $2), ($3, $4)) AS v(id, name)
+
+Select(t.id).From(t).Join(v, v.id == t.id)
+# SELECT t.id FROM t JOIN (VALUES ($1)) AS v(id) ON v.id = t.id
+```
+
 ## Subqueries and CTE (WITH)
 
 Any `Select` / `Insert` / `Update` / `Delete` has a `.Subquery(alias, materialized=False)` method.
@@ -540,9 +662,35 @@ With(sq).Select(F.count('*')).From(sq)
 # WITH sq AS (UPDATE t SET id = t.id2 RETURNING t.id) SELECT COUNT(*) FROM sq
 ```
 
-## Row locking (FOR UPDATE)
+### WITH RECURSIVE
 
-`Select.ForUpdate(*, of=None, nowait=False, skip_locked=False)`:
+`With(..., recursive=True)`. Reference the CTE by its future name via a `Table`
+with the same name inside the recursive term:
+
+```python
+tree = Table('tree')
+sq = (
+    Select(Literal(1).As('n'))
+    .UnionAll(Select(tree.n + 1).From(tree).Where(tree.n < 10))
+    .Subquery('tree')
+)
+With(sq, recursive=True).Select(sq.n).From(sq)
+# WITH RECURSIVE tree AS (SELECT 1 AS n UNION ALL SELECT n + $1 FROM tree WHERE n < $2)
+# SELECT n FROM tree
+```
+
+## Row locking (FOR UPDATE / FOR SHARE)
+
+Four methods, one per lock strength, with identical signatures
+`(*, of=None, nowait=False, skip_locked=False)`:
+
+| Method | SQL | Typical use |
+|---|---|---|
+| `.ForUpdate()` | `FOR UPDATE` | strongest: lock for update/delete |
+| `.ForNoKeyUpdate()` | `FOR NO KEY UPDATE` | update of non-key columns; doesn't block FK inserts into child tables |
+| `.ForShare()` | `FOR SHARE` | shared read lock |
+| `.ForKeyShare()` | `FOR KEY SHARE` | weakest; what FK checks take |
+
 - `of` — lock only rows of the given table(s): a table/alias or an iterable of them
 - `nowait=True` — error immediately instead of waiting for a lock
 - `skip_locked=True` — skip already locked rows
@@ -557,6 +705,12 @@ Select(t.id).From(t).ForUpdate(skip_locked=True)
 
 Select(t.id).From(t).ForUpdate(nowait=True)
 # SELECT id FROM t FOR UPDATE NOWAIT
+
+Select(t.id).From(t).ForNoKeyUpdate()
+# SELECT id FROM t FOR NO KEY UPDATE
+
+Select(t.id).From(t, t2).ForShare(of=t, nowait=True)
+# SELECT t.id FROM t, t2 FOR SHARE OF t NOWAIT
 
 t2a = t2.As('x')
 Select(t.id).From(t, t2a).ForUpdate(of=(t, t2a), skip_locked=True)
@@ -578,37 +732,49 @@ build(query, driver='asyncpg'|'psycopg') -> (sql, params)
 
 Table(name) -> table; .As(alias); .STAR; .<attr> -> column
 Select(*columns)
-    .From(*tables) .Join/LeftJoin/JoinLateral/LeftJoinLateral(item, on)
+    .From(*tables) .Join/LeftJoin/RightJoin/FullJoin(item, on) .CrossJoin(item)
+    .JoinLateral/LeftJoinLateral(item, on) .CrossJoinLateral(item)
     .Where(*exprs) .GroupBy(*exprs) .Having(*exprs)
     .OrderBy(*exprs|None) .Limit(v|None) .Offset(v|None)
     .Distinct via column.Distinct() / .DistinctOn(*exprs)
     .Union/UnionAll/Intersect/Except(select)
-    .ForUpdate(of=None, nowait=False, skip_locked=False)
+    .ForUpdate/.ForNoKeyUpdate/.ForShare/.ForKeyShare(of=None, nowait=False, skip_locked=False)
     .AddColumns(*exprs) .GetColumns() .As(alias) .Cast(type)
     .Subquery(alias, materialized=False)
 Insert(table, columns) .Values(*rows) .Select(select)
-    .OnConflict(constraint=, index_elements=, index_where=, do_update=, do_nothing=)
+    .OnConflict(constraint=, index_elements=, index_where=,
+                do_update=, do_update_where=, do_nothing=)
     .Returning(*exprs) .Subquery(alias)
 Update(table) .Set(dict) .From(*tables) .Where(*exprs) .Returning(*exprs) .Subquery(alias)
-Delete(table) .Where(*exprs) .Returning(*exprs) .Subquery(alias)
-With(*subqueries) .Select(...) / .Insert(table, columns) / .Update(table) / .Delete(table)
+Delete(table) .Using(*tables) .Where(*exprs) .Returning(*exprs) .Subquery(alias)
+Merge(table) .Using(source, on)
+    .WhenMatchedUpdate(dict, condition=None) .WhenMatchedDelete(condition=None)
+    .WhenMatchedDoNothing(condition=None)
+    .WhenNotMatchedInsert(columns, values, condition=None)
+    .WhenNotMatchedDoNothing(condition=None)
+    .Returning(*exprs) .Subquery(alias)
+With(*subqueries, recursive=False)
+    .Select(...) / .Insert(table, columns) / .Update(table) / .Delete(table) / .Merge(table)
+Values(*rows).As('v(a, b)') -> (VALUES ...) AS v(a, b) — FROM/JOIN/MERGE source item
 
 Param(value)    -> $1 / %(p1)s
 Literal(value)  -> inlined (int/float/str/bool/None/date/datetime/list); NULL = Literal(None)
-Raw('sql')      -> inserted as is
-F.<name>(*args) -> function; .Over(partition_by=, order_by=) .Where(*filter_exprs)
+Raw('sql')      -> inserted as is; DEFAULT = Raw('DEFAULT') for INSERT values
+F.<name>(*args) -> function; .Over(partition_by=, order_by=, frame=) .Where(*filter_exprs)
                    .OrderBy(*exprs) .WithinGroup(*order_exprs) .As('x(a, b)') for FROM usage
 Case((cond, value), ..., Else=default)
 Array([...]) / Tuple([...])
+GroupingSets(set1, set2, ...) — each set: expr, iterable or (); also F.rollup(...)/F.cube(...)
 And(*exprs) / Or(*exprs) / Not(expr) / Exists(select)
 Excluded(col) — excluded.* reference for ON CONFLICT DO UPDATE
 Old(col) / New(col) — old.* / new.* references in RETURNING (PostgreSQL 18+)
 
 expression methods (any column/param/literal/function/operation/select):
     == != > >= < <= + - * /  [idx] [start:stop]
-    .Is(x) .IsNot(x) .In(seq|select) .NotIn(seq|select)
-    .Any(seq|expr) .LikeAny(seq|expr) .IlikeAny(seq|expr)
-    .Between(a, b) .Like(x) .Ilike(x) .Op('operator', x)
+    .Is(x) .IsNot(x) .IsDistinctFrom(x) .IsNotDistinctFrom(x)
+    .In(seq|select) .NotIn(seq|select)
+    .Any(seq|expr) .All(seq|expr) .LikeAny(seq|expr) .IlikeAny(seq|expr)
+    .Between(a, b) .Like(x) .Ilike(x) .NotLike(x) .NotIlike(x) .Op('operator', x)
     .Cast(type) .As(alias) .Distinct() .Asc() .Desc() .NullsFirst() .NullsLast()
 ```
 

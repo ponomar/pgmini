@@ -86,6 +86,28 @@ t = Table('t')
         'PERCENTILE_CONT($1) WITHIN GROUP (ORDER BY t.fld, t.fld2)', [0.9],
         id='within group multiple',
     ),
+    pytest.param(
+        F.sum(t.x).Over(order_by=t.id, frame='ROWS BETWEEN 1 PRECEDING AND CURRENT ROW'),
+        'SUM(t.x) OVER (ORDER BY t.id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)', [],
+        id='over frame rows',
+    ),
+    pytest.param(
+        F.avg(t.x).Over(
+            partition_by=t.grp,
+            order_by=t.id,
+            frame='RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING',
+        ),
+        (
+            'AVG(t.x) OVER (PARTITION BY t.grp ORDER BY t.id '
+            'RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)'
+        ), [],
+        id='over frame range',
+    ),
 ])
 def test(func, res: str, updated: list):
     assert build(func) == (res, updated)
+
+
+def test_over_frame_invalid():
+    with pytest.raises(ValueError):
+        F.sum(t.x).Over(frame='BETWEEN 1 PRECEDING AND CURRENT ROW')

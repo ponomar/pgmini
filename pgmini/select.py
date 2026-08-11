@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Any, Literal as LiteralT
+from types import MappingProxyType
+from typing import Any, Final
 
 import attrs
 
@@ -33,18 +34,37 @@ def _convert_on_statement(value):
     return value
 
 
+_JOIN_SQL: Final = MappingProxyType({
+    'inner': 'JOIN',
+    'left': 'LEFT JOIN',
+    'right': 'RIGHT JOIN',
+    'full': 'FULL JOIN',
+    'cross': 'CROSS JOIN',
+})
+
+
 @attrs.frozen
 class _Join:
-    type: LiteralT['left', 'right'] = attrs.field(validator=attrs.validators.in_({'left', 'right'}))
+    type: str = attrs.field(validator=attrs.validators.in_(_JOIN_SQL))
     table: FromABC
-    on_statement: Any = attrs.field(converter=_convert_on_statement)
+    on_statement: Any = attrs.field(converter=_convert_on_statement, default=None)
     lateral: bool = attrs.field(validator=attrs.validators.in_({True, False}), default=False)
 
+    @on_statement.validator
+    def _vld_on_statement(self, attribute, value):
+        if self.type == 'cross':
+            if value is not None:
+                raise ValueError(value)
+        elif value is None:
+            raise ValueError('ON statement is required for %s join' % self.type)
+
+    @lateral.validator
+    def _vld_lateral(self, attribute, value):
+        if value and self.type in {'right', 'full'}:
+            raise ValueError('LATERAL is not allowed with %s join' % self.type)
+
     def _build(self, params: list | dict):
-        if self.type == 'right':
-            sql = 'JOIN'
-        else:
-            sql = 'LEFT JOIN'
+        sql = _JOIN_SQL[self.type]
 
         cte = self.table in CTX_CTE.get()
         if self.lateral:
@@ -56,8 +76,9 @@ class _Join:
             sql,
             self.table._get_name() if cte else self.table._get_from_statement(params),
         )
-        with set_context({CTX_TABLES: ()}):  # should always prefix column with table name
-            res += ' ON %s' % self.on_statement._build(params)
+        if self.on_statement is not None:
+            with set_context({CTX_TABLES: ()}):  # should always prefix column with table name
+                res += ' ON %s' % self.on_statement._build(params)
 
         return res
 
@@ -91,15 +112,24 @@ class _Except(_UnionBase):
     expr: str = 'EXCEPT'
 
 
-def _convert_for_update_of(value):
+def _convert_locking_of(value):
     if value is not None and not isinstance(value, tuple):
         value = tuple(value) if isinstance(value, (list, set, frozenset)) else (value,)
     return value
 
 
+_LOCK_STRENGTHS: Final = frozenset({
+    'UPDATE', 'NO KEY UPDATE', 'SHARE', 'KEY SHARE',
+})
+
+
 @attrs.frozen
-class _ForUpdate:
-    of: tuple[FromABC, ...] | None = attrs.field(converter=_convert_for_update_of, default=None)
+class _Locking:
+    strength: str = attrs.field(
+        validator=attrs.validators.in_(_LOCK_STRENGTHS),
+        default='UPDATE',
+    )
+    of: tuple[FromABC, ...] | None = attrs.field(converter=_convert_locking_of, default=None)
     nowait: bool = attrs.field(validator=attrs.validators.in_({True, False}), default=False)
     skip_locked: bool = attrs.field(
         validator=attrs.validators.in_({True, False}),
@@ -108,7 +138,10 @@ class _ForUpdate:
 
     @of.validator
     def _vld_of(self, attribute, value):
-        if value is not None and (bad := [i for i in value if not isinstance(i, FromABC)]):
+        if (
+            value is not None
+            and (bad := next((i for i in value if not isinstance(i, FromABC)), None)) is not None
+        ):
             raise TypeError(bad)
 
     @skip_locked.validator
@@ -117,7 +150,7 @@ class _ForUpdate:
             raise ValueError('NOWAIT and SKIP LOCKED are mutually exclusive')
 
     def _build(self) -> str:
-        res = 'FOR UPDATE'
+        res = 'FOR %s' % self.strength
         if self.of:
             res = '%s OF %s' % (res, ', '.join(i._get_name() for i in self.of))
         if self.nowait:
@@ -147,6 +180,7 @@ def _convert_offset(value):
 class Select(CompileABC, SelectMX):
     _columns: tuple[CompileABC, ...] = attrs.field(alias='x_columns', converter=_convert_columns)
     _with: tuple[Subquery, ...] = attrs.field(alias='x_with', factory=tuple)
+    _with_recursive: bool = attrs.field(alias='x_with_recursive', default=False)
     _from: tuple[FromABC, ...] = attrs.field(alias='x_from', factory=tuple)
     _join: tuple[_Join, ...] = attrs.field(alias='x_join', factory=tuple)
     _where: tuple[CompileABC, ...] = attrs.field(alias='x_where', factory=tuple)
@@ -161,7 +195,7 @@ class Select(CompileABC, SelectMX):
         default=None,
     )
     _union: tuple[_UnionBase, ...] = attrs.field(alias='x_union', factory=tuple)
-    _for_update: _ForUpdate | None = attrs.field(alias='x_for_update', default=None)
+    _locking: _Locking | None = attrs.field(alias='x_locking', default=None)
     _cast: str | None = attrs.field(alias='x_cast', default=None)
     _alias: str | None = attrs.field(alias='x_alias', default=None)
 
@@ -181,7 +215,7 @@ class Select(CompileABC, SelectMX):
 
     @_distinct_on.validator
     def _vld_distinct_on(self, attribute, value):
-        if bad := [i for i in value if not isinstance(i, CompileABC)]:
+        if (bad := next((i for i in value if not isinstance(i, CompileABC)), None)) is not None:
             raise TypeError(bad)
 
     def AddColumns(self, *columns):
@@ -207,7 +241,7 @@ class Select(CompileABC, SelectMX):
     def Join(self, other: FromABC, on_statement):
         return attrs.evolve(
             self,
-            x_join=self._join + (_Join('right', other, on_statement=on_statement),),
+            x_join=self._join + (_Join('inner', other, on_statement=on_statement),),
         )
 
     def LeftJoin(self, other: FromABC, on_statement):
@@ -216,10 +250,25 @@ class Select(CompileABC, SelectMX):
             x_join=self._join + (_Join('left', other, on_statement=on_statement),),
         )
 
+    def RightJoin(self, other: FromABC, on_statement):
+        return attrs.evolve(
+            self,
+            x_join=self._join + (_Join('right', other, on_statement=on_statement),),
+        )
+
+    def FullJoin(self, other: FromABC, on_statement):
+        return attrs.evolve(
+            self,
+            x_join=self._join + (_Join('full', other, on_statement=on_statement),),
+        )
+
+    def CrossJoin(self, other: FromABC):
+        return attrs.evolve(self, x_join=self._join + (_Join('cross', other),))
+
     def JoinLateral(self, other: FromABC, on_statement):
         return attrs.evolve(
             self,
-            x_join=self._join + (_Join('right', other, on_statement=on_statement, lateral=True),),
+            x_join=self._join + (_Join('inner', other, on_statement=on_statement, lateral=True),),
         )
 
     def LeftJoinLateral(self, other: FromABC, on_statement):
@@ -227,6 +276,9 @@ class Select(CompileABC, SelectMX):
             self,
             x_join=self._join + (_Join('left', other, on_statement=on_statement, lateral=True),),
         )
+
+    def CrossJoinLateral(self, other: FromABC):
+        return attrs.evolve(self, x_join=self._join + (_Join('cross', other, lateral=True),))
 
     def Where(self, *statements: CompileABC):
         """New statements will be added to old ones"""
@@ -271,11 +323,23 @@ class Select(CompileABC, SelectMX):
     def Except(self, other: Select):
         return attrs.evolve(self, x_union=self._union + (_Except(other),))
 
-    def ForUpdate(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+    def _lock(self, strength: str, of, nowait: bool, skip_locked: bool):
         return attrs.evolve(
             self,
-            x_for_update=_ForUpdate(of=of, nowait=nowait, skip_locked=skip_locked),
+            x_locking=_Locking(strength=strength, of=of, nowait=nowait, skip_locked=skip_locked),
         )
+
+    def ForUpdate(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+        return self._lock('UPDATE', of, nowait, skip_locked)
+
+    def ForNoKeyUpdate(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+        return self._lock('NO KEY UPDATE', of, nowait, skip_locked)
+
+    def ForShare(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+        return self._lock('SHARE', of, nowait, skip_locked)
+
+    def ForKeyShare(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+        return self._lock('KEY SHARE', of, nowait, skip_locked)
 
     def As(self, alias: str):
         return attrs.evolve(self, x_alias=alias)
@@ -293,7 +357,7 @@ class Select(CompileABC, SelectMX):
             if CTX_CTE.get():
                 raise ValueError
             CTX_CTE.set(self._with)
-            parts.append(build_with(self._with, params))
+            parts.append(build_with(self._with, params, recursive=self._with_recursive))
 
         ctx = partial(set_context, {CTX_TABLES: self._from + tuple(i.table for i in self._join)})
 
@@ -350,8 +414,8 @@ class Select(CompileABC, SelectMX):
             for obj in self._union:
                 parts.append(obj._build(params))
 
-        if self._for_update is not None:
-            parts.append(self._for_update._build())
+        if self._locking is not None:
+            parts.append(self._locking._build())
 
         res = ' '.join(parts)
 

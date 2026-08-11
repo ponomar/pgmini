@@ -1,6 +1,7 @@
 import pytest
 
 from pgmini import (
+    DEFAULT,
     NULL,
     And,
     Excluded,
@@ -36,6 +37,11 @@ def test_values():
         "INSERT INTO t (c1, c2, c3, c4, c5) VALUES ($1, 2, $2, 'xyz', $3::int)",
         [1, 'abc', 55],
     )
+
+
+def test_values_default():
+    q = Ins(t, columns=('id', 'name')).Values((1, DEFAULT))
+    assert build(q) == ('INSERT INTO t (id, name) VALUES ($1, DEFAULT)', [1])
 
 
 def test_values_multiple():
@@ -199,6 +205,27 @@ def test_on_conflict_returning_old_new():
 def test_on_conflict_do_update():
     q = Ins(t, (t.id,)).OnConflict(index_elements=(t.col5,), do_update={t.col1: L(15)})
     assert build(q) == ('INSERT INTO t (id) ON CONFLICT (col5) DO UPDATE SET col1 = 15', [])
+
+
+def test_on_conflict_do_update_where():
+    q = Ins(t, (t.id,)).OnConflict(
+        index_elements=(t.id,),
+        do_update={t.cnt: Excluded(t.cnt)},
+        do_update_where=t.cnt < 100,
+    )
+    assert build(q) == (
+        'INSERT INTO t (id) ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $1',
+        [100],
+    )
+
+
+def test_on_conflict_do_update_where_requires_do_update():
+    with pytest.raises(ValueError):
+        Ins(t, (t.id,)).OnConflict(
+            index_elements=(t.id,),
+            do_nothing=True,
+            do_update_where=t.id > 1,
+        )
 
 
 def test_on_conflict_do_update_multiple():

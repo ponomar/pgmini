@@ -127,6 +127,24 @@ def test_multiple():
         t.col.IlikeAny(obj6 := ['%abc%']), 't.col ILIKE ANY($1)', [obj6],
         id='ILIKE ANY raw',
     ),
+    pytest.param(
+        t.col.All(obj7 := [1, 2, 3]), 't.col = ALL($1)', [obj7],
+        id='ALL raw',
+    ),
+    pytest.param(
+        t.col.All(P(['a%']).Cast('text[]')), 't.col = ALL($1::text[])', [['a%']],
+        id='ALL param',
+    ),
+    pytest.param(
+        t.col.IsDistinctFrom(t2.x), 't.col IS DISTINCT FROM t2.x', [],
+        id='is distinct from',
+    ),
+    pytest.param(
+        t.col.IsNotDistinctFrom(5), 't.col IS NOT DISTINCT FROM $1', [5],
+        id='is not distinct from',
+    ),
+    pytest.param(t.col.NotLike('%x%'), 't.col NOT LIKE $1', ['%x%'], id='not like'),
+    pytest.param(t.col.NotIlike(L('%x%')), "t.col NOT ILIKE '%x%'", [], id='not ilike'),
     pytest.param(t.col.Op('->', L('path')), "t.col -> 'path'", [], id='custom'),
     pytest.param(
         t.col.Op('#>', L(['l1', 'l2'])), "t.col #> ARRAY['l1', 'l2']", [],

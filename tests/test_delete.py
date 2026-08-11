@@ -36,6 +36,23 @@ def test_returning_old():
     assert build(q) == ('DELETE FROM t2 RETURNING old.id, old.*', [])
 
 
+def test_using():
+    q = D(t).Using(t2).Where(t2.id == t.id, t2.status == 'deleted')
+    assert build(q) == (
+        'DELETE FROM t USING t2 WHERE t2.id = t.id AND t2.status = $1',
+        ['deleted'],
+    )
+
+
+def test_using_subquery():
+    sq = S(t2.id).From(t2).Subquery('sq')
+    q = D(t).Using(sq).Where(sq.id == t.id).Returning(t.id)
+    assert build(q) == (
+        'DELETE FROM t USING (SELECT id FROM t2) AS sq WHERE sq.id = t.id RETURNING t.id',
+        [],
+    )
+
+
 def test_where():
     q = D(t).Where(t.id > 0, Or(t.name.Cast('text') == 'ololo', t.dt == NULL))
     assert build(q) == (

@@ -44,6 +44,12 @@ def _convert_order_by(value):
 class Over:
     partition_by: tuple | None = attrs.field(converter=_convert_partition_by, default=None)
     order_by: tuple | None = attrs.field(converter=_convert_order_by, default=None)
+    frame: str | None = attrs.field(default=None)
+
+    @frame.validator
+    def _vld_frame(self, attribute, value):
+        if value is not None and not value.startswith(('ROWS', 'RANGE', 'GROUPS')):
+            raise ValueError(value)
 
     def build(self, params: list) -> str:
         res = []
@@ -57,6 +63,8 @@ class Over:
                 i._build(params)
                 for i in self.order_by
             ))
+        if self.frame is not None:
+            res.append(self.frame)
         return 'OVER (%s)' % ' '.join(res)
 
 
@@ -80,8 +88,11 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
     _within_group: tuple[CompileABC, ...] = attrs.field(alias='x_within_group', factory=tuple)
     _marks: MARKS_TYPE = MARKS_FIELD
 
-    def Over(self, *, partition_by=None, order_by=None):
-        return attrs.evolve(self, x_over=Over(partition_by=partition_by, order_by=order_by))
+    def Over(self, *, partition_by=None, order_by=None, frame: str | None = None):
+        return attrs.evolve(
+            self,
+            x_over=Over(partition_by=partition_by, order_by=order_by, frame=frame),
+        )
 
     def WithinGroup(self, *statements):
         return attrs.evolve(
