@@ -5,7 +5,7 @@ import attrs
 
 from .array import Array, Tuple
 from .case import Case
-from .column import Column, Excluded
+from .column import Column, Excluded, New, Old
 from .delete import Delete
 from .func import F, Func
 from .insert import Insert
@@ -39,8 +39,10 @@ __all__ = (
     'Func',
     'Insert',
     'Literal',
+    'New',
     'Not',
     'NULL',
+    'Old',
     'Or',
     'Param',
     'Raw',

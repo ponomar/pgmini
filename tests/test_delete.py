@@ -1,4 +1,15 @@
-from pgmini import NULL, Delete as D, F, Literal as L, Or, Select as S, Table as T, With as W, build
+from pgmini import (
+    NULL,
+    Delete as D,
+    F,
+    Literal as L,
+    Old,
+    Or,
+    Select as S,
+    Table as T,
+    With as W,
+    build,
+)
 
 from .utils import compact
 
@@ -18,6 +29,11 @@ def test_returning():
 def test_returning_star():
     q = D(t2).Returning(t2.STAR)
     assert build(q) == ('DELETE FROM t2 RETURNING t2.*', [])
+
+
+def test_returning_old():
+    q = D(t2).Returning(Old(t2.id), Old(t2.STAR))
+    assert build(q) == ('DELETE FROM t2 RETURNING old.id, old.*', [])
 
 
 def test_where():

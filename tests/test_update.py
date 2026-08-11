@@ -2,6 +2,8 @@ from pgmini import (
     NULL,
     Func as F,
     Literal as L,
+    New,
+    Old,
     Or,
     Param as P,
     Select as S,
@@ -37,6 +39,26 @@ def test_returning():
 def test_returning_star():
     q = U(t).Set({'a': NULL}).Returning(t.STAR)
     assert build(q) == ('UPDATE t SET a = NULL RETURNING t.*', [])
+
+
+def test_returning_old_new():
+    q = U(t).Set({t.price: 100}).Where(t.id == 1).Returning(Old(t.price), New(t.price))
+    assert build(q) == (
+        'UPDATE t SET price = $1 WHERE t.id = $2 RETURNING old.price, new.price',
+        [100, 1],
+    )
+
+
+def test_returning_old_new_expression():
+    q = U(t).Set({'price': L(0)}).Returning(
+        (New(t.price) - Old(t.price)).As('diff'),
+        Old('name'),
+        New(t.STAR),
+    )
+    assert build(q) == (
+        'UPDATE t SET price = 0 RETURNING new.price - old.price AS diff, old.name, new.*',
+        [],
+    )
 
 
 def test_where():

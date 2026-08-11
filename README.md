@@ -470,6 +470,33 @@ Update(t).Set({t.status: t2.status}).From(t2).Where(t2.id == t.id)
 
 `Set` takes a dict (keys: column objects or strings). `Where` is chainable (AND).
 
+### RETURNING old / new (PostgreSQL 18+)
+
+`Old(col)` / `New(col)` reference the row values before / after the change.
+Works in RETURNING of INSERT / UPDATE / DELETE; accepts a column object,
+a column name string or `.STAR`; composes with expressions.
+
+```python
+from pgmini import New, Old
+
+Update(t).Set({t.price: 100}).Where(t.id == 1).Returning(
+    Old(t.price),
+    New(t.price),
+    (New(t.price) - Old(t.price)).As('diff'),
+)
+# UPDATE t SET price = $1 WHERE t.id = $2
+# RETURNING old.price, new.price, new.price - old.price AS diff
+
+Delete(t).Returning(Old(t.STAR))
+# DELETE FROM t RETURNING old.*
+
+Insert(t, (t.id,)).Values((1,)).OnConflict(
+    index_elements=(t.id,), do_update={t.cnt: t.cnt + 1},
+).Returning(Old(t.cnt), New(t.cnt))
+# INSERT INTO t (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET cnt = t.cnt + $2
+# RETURNING old.cnt, new.cnt
+```
+
 ## DELETE
 
 ```python
@@ -575,6 +602,7 @@ Case((cond, value), ..., Else=default)
 Array([...]) / Tuple([...])
 And(*exprs) / Or(*exprs) / Not(expr) / Exists(select)
 Excluded(col) — excluded.* reference for ON CONFLICT DO UPDATE
+Old(col) / New(col) — old.* / new.* references in RETURNING (PostgreSQL 18+)
 
 expression methods (any column/param/literal/function/operation/select):
     == != > >= < <= + - * /  [idx] [start:stop]

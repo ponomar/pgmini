@@ -10,12 +10,15 @@ from .param import Param
 from .utils import CTX_DISABLE_TABLE_IN_COLUMN, CTX_TABLES, CompileABC, FromABC, SelectMX
 
 
-class _Excluded(FromABC):
+@attrs.frozen
+class _PseudoTable(FromABC):
+    _name: str = attrs.field(alias='name')
+
     def _get_from_statement(self, params: list) -> str:
         raise RuntimeError
 
     def _get_name(self) -> str:
-        return 'excluded'
+        return self._name
 
 
 @attrs.frozen(eq=False, unsafe_hash=True)
@@ -33,7 +36,7 @@ class Column(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Se
             not CTX_DISABLE_TABLE_IN_COLUMN.get()
             and self._table is not None
             and (
-                isinstance(self._table, _Excluded)
+                isinstance(self._table, _PseudoTable)
                 or len(CTX_TABLES.get()) > 1
                 or self._table not in CTX_TABLES.get()
             )
@@ -45,14 +48,28 @@ class Column(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, Se
         return res
 
 
-def Excluded(column: str | Column) -> Column:
+def _pseudo_column(name: str, column: str | Column) -> Column:
     if isinstance(column, str):
-        return Column(column, table=_Excluded())
+        return Column(column, table=_PseudoTable(name))
 
     if not isinstance(column, Column):
         raise TypeError(column)
 
-    return attrs.evolve(column, table=_Excluded())
+    return attrs.evolve(column, table=_PseudoTable(name))
+
+
+def Excluded(column: str | Column) -> Column:
+    return _pseudo_column('excluded', column)
+
+
+def Old(column: str | Column) -> Column:
+    """RETURNING old.<column> (PostgreSQL 18+)"""
+    return _pseudo_column('old', column)
+
+
+def New(column: str | Column) -> Column:
+    """RETURNING new.<column> (PostgreSQL 18+)"""
+    return _pseudo_column('new', column)
 
 
 def prepare_column(col):

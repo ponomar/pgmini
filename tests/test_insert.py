@@ -7,6 +7,8 @@ from pgmini import (
     Func as F,
     Insert as Ins,
     Literal as L,
+    New,
+    Old,
     Or,
     Param as P,
     Select as S,
@@ -178,6 +180,20 @@ def test_on_conflict_index_where_multiple():
 def test_on_conflict_do_nothing():
     q = Ins(t, (t.id,)).OnConflict(do_nothing=True)
     assert build(q) == ('INSERT INTO t (id) ON CONFLICT DO NOTHING', [])
+
+
+def test_on_conflict_returning_old_new():
+    q = (
+        Ins(t, (t.id,))
+        .Values((1,))
+        .OnConflict(index_elements=(t.id,), do_update={t.cnt: t.cnt + 3})
+        .Returning(Old(t.cnt), New(t.cnt))
+    )
+    assert build(q) == (
+        'INSERT INTO t (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET cnt = t.cnt + $2 '
+        'RETURNING old.cnt, new.cnt',
+        [1, 3],
+    )
 
 
 def test_on_conflict_do_update():
