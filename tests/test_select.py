@@ -201,6 +201,11 @@ def test_group_by_not_chainable():
         q.GroupBy(t.name)
 
 
+def test_group_by_ordinal():
+    q = S(t.id, t.name, F.count('*')).From(t).GroupBy(1, 2)
+    assert build(q) == ('SELECT id, name, COUNT(*) FROM t GROUP BY 1, 2', [])
+
+
 def test_group_by_grouping_sets():
     q = S(t.a, t.b, F.count('*')).From(t).GroupBy(GroupingSets((t.a, t.b), t.a, ()))
     assert build(q) == (
@@ -330,6 +335,13 @@ def test_order_by_nulls_rewrite():
     assert (
         build(S(L(1)).From(t).OrderBy(t.id.NullsFirst().NullsLast()))[0]
         == 'SELECT 1 FROM t ORDER BY id NULLS LAST'
+    )
+
+
+def test_order_by_ordinal():
+    assert (
+        build(S(t.id, t.name).From(t).OrderBy(2, L(1).Desc()))
+        == ('SELECT id, name FROM t ORDER BY 2, 1 DESC', [])
     )
 
 

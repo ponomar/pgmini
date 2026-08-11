@@ -8,7 +8,7 @@ import attrs
 
 from .cast import build_cast
 from .column import Column, prepare_column
-from .literal import Literal
+from .literal import Literal, prepare_ordinal
 from .operators import And
 from .order_by import do_order_by
 from .param import Param
@@ -287,7 +287,7 @@ class Select(CompileABC, SelectMX):
     def GroupBy(self, *statements: CompileABC):
         if self._group_by != ():
             raise ValueError(self._group_by)
-        return attrs.evolve(self, x_group_by=statements)
+        return attrs.evolve(self, x_group_by=tuple(prepare_ordinal(i) for i in statements))
 
     def Having(self, *statements: CompileABC):
         """New statements will be added to old ones"""
@@ -301,7 +301,7 @@ class Select(CompileABC, SelectMX):
         None will remove ORDER BY if was set.
         New statements will be added to old ones.
         """
-        return do_order_by(self, statements)
+        return do_order_by(self, tuple(prepare_ordinal(i) for i in statements))
 
     def Limit(self, value):
         """None will remove LIMIT if was set."""

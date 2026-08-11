@@ -66,3 +66,14 @@ class Literal(CompileABC, CastMX, AliasMX, DistinctMX, OrderByMX, OperationMX, S
 
 
 NULL: Final[Literal] = Literal(None)
+
+
+def prepare_ordinal(value):
+    """GROUP BY / ORDER BY column indexes: inline plain ints as literals.
+
+    Converting them to params would make postgres sort/group by a constant
+    value instead of the column position.
+    """
+    if isinstance(value, int) and not isinstance(value, bool):
+        return Literal(value)
+    return value

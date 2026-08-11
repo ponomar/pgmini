@@ -245,6 +245,10 @@ Select(F.count('*')).From(t).GroupBy(t.status).Having(F.count('*') > 10)
 # GROUP BY by output alias — use Raw
 Select(t.id.As('xyz')).From(t).GroupBy(Raw('xyz'))
 # SELECT id AS xyz FROM t GROUP BY xyz
+
+# column ordinals: plain ints are inlined (NOT params)
+Select(t.id, t.name, F.count('*')).From(t).GroupBy(1, 2)
+# SELECT id, name, COUNT(*) FROM t GROUP BY 1, 2
 ```
 
 `GroupBy` can be set only once; `Having` is chainable (works as AND).
@@ -274,6 +278,10 @@ Select(t.STAR).From(t).OrderBy(t.id.Desc(), t.name.NullsLast())
 
 Select(t.id).From(t).OrderBy(t.id).OrderBy(t.age)  # chainable: appended
 # SELECT id FROM t ORDER BY id, age
+
+# column ordinals: plain ints are inlined (NOT params — a param would sort by a constant)
+Select(t.id, t.name).From(t).OrderBy(2, Literal(1).Desc())
+# SELECT id, name FROM t ORDER BY 2, 1 DESC
 
 q.OrderBy(None)   # removes ORDER BY
 q.Limit(10)       # LIMIT $n  (value becomes a param; Literal(10) inlines it)
@@ -507,12 +515,13 @@ Insert(t, (t.id,)).OnConflict(do_update={
 # INSERT INTO t (id) ON CONFLICT DO UPDATE
 # SET col1 = $1, col2 = t.col2 + $2, col3 = excluded.col8::int * $3
 
-Insert(t, (t.id,)).OnConflict(
+Insert(t, (t.id,)).Values((1,)).OnConflict(
     index_elements=(t.id,),
     do_update={t.cnt: Excluded(t.cnt)},
     do_update_where=t.cnt < 100,
 )
-# INSERT INTO t (id) ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $1
+# INSERT INTO t (id) VALUES ($1)
+# ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $2
 ```
 
 ## UPDATE
@@ -734,8 +743,9 @@ Table(name) -> table; .As(alias); .STAR; .<attr> -> column
 Select(*columns)
     .From(*tables) .Join/LeftJoin/RightJoin/FullJoin(item, on) .CrossJoin(item)
     .JoinLateral/LeftJoinLateral(item, on) .CrossJoinLateral(item)
-    .Where(*exprs) .GroupBy(*exprs) .Having(*exprs)
-    .OrderBy(*exprs|None) .Limit(v|None) .Offset(v|None)
+    .Where(*exprs) .GroupBy(*exprs|ints) .Having(*exprs)
+    .OrderBy(*exprs|ints|None) .Limit(v|None) .Offset(v|None)
+    # plain ints in GroupBy/OrderBy are column ordinals, inlined as literals
     .Distinct via column.Distinct() / .DistinctOn(*exprs)
     .Union/UnionAll/Intersect/Except(select)
     .ForUpdate/.ForNoKeyUpdate/.ForShare/.ForKeyShare(of=None, nowait=False, skip_locked=False)

@@ -6,7 +6,7 @@ from .alias import AliasMX, extract_alias
 from .cast import CastMX
 from .column import Column, prepare_column
 from .distinct import DistinctMX
-from .literal import Literal
+from .literal import Literal, prepare_ordinal
 from .marks import MARKS_FIELD, MARKS_TYPE
 from .operation import OperationMX
 from .order_by import OrderByMX, do_order_by
@@ -104,7 +104,7 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
         return attrs.evolve(self, x_where=statements)
 
     def OrderBy(self, *statements):
-        return do_order_by(self, statements)
+        return do_order_by(self, tuple(prepare_ordinal(i) for i in statements))
 
     def _build(self, params: list | dict) -> str:
         if alias := extract_alias(self):

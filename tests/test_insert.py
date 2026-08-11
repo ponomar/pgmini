@@ -208,14 +208,15 @@ def test_on_conflict_do_update():
 
 
 def test_on_conflict_do_update_where():
-    q = Ins(t, (t.id,)).OnConflict(
+    q = Ins(t, (t.id,)).Values((1,)).OnConflict(
         index_elements=(t.id,),
         do_update={t.cnt: Excluded(t.cnt)},
         do_update_where=t.cnt < 100,
     )
     assert build(q) == (
-        'INSERT INTO t (id) ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $1',
-        [100],
+        'INSERT INTO t (id) VALUES ($1) '
+        'ON CONFLICT (id) DO UPDATE SET cnt = excluded.cnt WHERE t.cnt < $2',
+        [1, 100],
     )
 
 
