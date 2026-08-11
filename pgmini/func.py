@@ -134,15 +134,20 @@ class _Func(CompileABC, FromABC, CastMX, AliasMX, DistinctMX, OrderByMX, Operati
         return self._build(params)
 
     def _get_name(self) -> str:
+        if self._marks is not None and (alias := self._marks.alias):
+            # 'x(a, b)' -> 'x'
+            return alias.split('(', 1)[0].strip()
         return self._name
 
-    STAR: Final[Column] = Column(STAR_SIGN, table=None)
+    @property
+    def STAR(self) -> Column:
+        return Column(STAR_SIGN, table=self)
 
     def __getattribute__(self, item: str) -> Column:
         try:
             return object.__getattribute__(self, item)
         except AttributeError:
-            return Column(item, table=None)
+            return Column(item, table=self)
 
 
 class FuncCls:

@@ -457,6 +457,34 @@ def test_for_update_skip_locked():
     )
 
 
+def test_for_update_nowait():
+    assert (
+        build(S(t.id).From(t).ForUpdate(nowait=True))[0]
+        == 'SELECT id FROM t FOR UPDATE NOWAIT'
+    )
+
+
+def test_for_update_of():
+    t2a = t2.As('x')
+    assert (
+        build(S(t.id).From(t, t2a).Where(t.id == t2a.id).ForUpdate(of=t))[0]
+        == 'SELECT t.id FROM t, t2 AS x WHERE t.id = x.id FOR UPDATE OF t'
+    )
+
+
+def test_for_update_of_multiple_skip_locked():
+    t2a = t2.As('x')
+    assert (
+        build(S(t.id).From(t, t2a).ForUpdate(of=(t, t2a), skip_locked=True))[0]
+        == 'SELECT t.id FROM t, t2 AS x FOR UPDATE OF t, x SKIP LOCKED'
+    )
+
+
+def test_for_update_nowait_and_skip_locked_forbidden():
+    with pytest.raises(ValueError):
+        S(t.id).From(t).ForUpdate(nowait=True, skip_locked=True)
+
+
 def test_with_for_update():
     sq = S(t.id).From(t).Where(t.id == L(7)).ForUpdate().Subquery('sq')
     assert (
@@ -583,7 +611,7 @@ def test_select_star_from_aliased_function():
 def test_select_from_table_and_series():
     f = F.unnest(t.tags).As('x(tag)')
     assert build(S(t.id, f.tag).From(t, f)) == (
-        'SELECT t.id, tag FROM t, UNNEST(t.tags) AS x(tag)',
+        'SELECT t.id, x.tag FROM t, UNNEST(t.tags) AS x(tag)',
         [],
     )
 

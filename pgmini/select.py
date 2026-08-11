@@ -91,15 +91,37 @@ class _Except(_UnionBase):
     expr: str = 'EXCEPT'
 
 
+def _convert_for_update_of(value):
+    if value is not None and not isinstance(value, tuple):
+        value = tuple(value) if isinstance(value, (list, set, frozenset)) else (value,)
+    return value
+
+
 @attrs.frozen
 class _ForUpdate:
+    of: tuple[FromABC, ...] | None = attrs.field(converter=_convert_for_update_of, default=None)
+    nowait: bool = attrs.field(validator=attrs.validators.in_({True, False}), default=False)
     skip_locked: bool = attrs.field(
         validator=attrs.validators.in_({True, False}),
         default=False,
     )
 
+    @of.validator
+    def _vld_of(self, attribute, value):
+        if value is not None and (bad := [i for i in value if not isinstance(i, FromABC)]):
+            raise TypeError(bad)
+
+    @skip_locked.validator
+    def _vld_skip_locked(self, attribute, value):
+        if value and self.nowait:
+            raise ValueError('NOWAIT and SKIP LOCKED are mutually exclusive')
+
     def _build(self) -> str:
         res = 'FOR UPDATE'
+        if self.of:
+            res = '%s OF %s' % (res, ', '.join(i._get_name() for i in self.of))
+        if self.nowait:
+            res = '%s NOWAIT' % res
         if self.skip_locked:
             res = '%s SKIP LOCKED' % res
         return res
@@ -249,8 +271,11 @@ class Select(CompileABC, SelectMX):
     def Except(self, other: Select):
         return attrs.evolve(self, x_union=self._union + (_Except(other),))
 
-    def ForUpdate(self, *, skip_locked: bool = False):
-        return attrs.evolve(self, x_for_update=_ForUpdate(skip_locked=skip_locked))
+    def ForUpdate(self, *, of=None, nowait: bool = False, skip_locked: bool = False):
+        return attrs.evolve(
+            self,
+            x_for_update=_ForUpdate(of=of, nowait=nowait, skip_locked=skip_locked),
+        )
 
     def As(self, alias: str):
         return attrs.evolve(self, x_alias=alias)
